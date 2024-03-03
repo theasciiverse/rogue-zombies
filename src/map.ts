@@ -1,32 +1,39 @@
-import Renderer, { Drawable } from "./renderer/renderer.js";
+import Renderer, { Drawable, Visual } from "./renderer/renderer.js";
 import Being from "./beings/being.js";
 import Item from "./items/item.js";
+import Background from "./background.js";
 
 
 export default class Map {
 	protected beings: Being[] = [];
 	protected items: Item[] = [];
-	protected bg: Drawable[][] = [];
+	protected bg: Background;
 	protected oldPositions = new window.Map<Drawable, number[]>();
 
 	constructor(readonly width: number, readonly height: number, readonly renderer: Renderer) {
-		this.bg = createBackground(width, height);
+		this.bg = new Background(width, height);
 
 		for (let i=0;i<width;i++) {
 			for (let j=0;j<height;j++) {
-				this.redraw(i, j);
+				this.redraw([i, j]);
 			}
 		}
 	}
 
+	isPositionValid(x: number, y: number) {
+		const { width, height } = this;
+		if (x < 0 || x >= width || y < 0 || y >= height) { return false; }
+		return true;
+	}
+
 	addBeing(being: Being) {
 		this.beings.push(being);
-		this.redraw(being.position[0], being.position[1]);
+		this.redraw(being.position);
 	}
 
 	addItem(item: Item) {
 		this.items.push(item);
-		this.redraw(item.position[0], item.position[1]);
+		this.redraw(item.position);
 	}
 
 	getBeing(x: number, y: number) {
@@ -37,16 +44,34 @@ export default class Map {
 		return this.items.find(item => item.position[0] == x && item.position[1] == y);
 	}
 
+	removeBeing(being: Being) {
+		this.beings = this.beings.filter(b => b != being);
+		this.renderer.remove(being);
+		this.redraw(being.position);
+	}
+
+	removeItem(item: Item) {
+		this.items = this.items.filter(i => i != item);
+		this.renderer.remove(item);
+		this.redraw(item.position);
+	}
+
+	setBackground(x: number, y: number, visual: Partial<Visual>) {
+		this.bg.set(x, y, visual);
+		this.redraw([x, y]);
+	}
+
 	changed(what: Drawable) {
 		const { oldPositions } = this;
 		let op = oldPositions.get(what);
-		if (op) { this.redraw(op[0], op[1]); }
+		if (op) { this.redraw(op); }
 
 		oldPositions.set(what, what.position.slice());
-		this.redraw(what.position[0], what.position[1]);
+		this.redraw(what.position);
 	}
 
-	protected redraw(x: number, y: number) {
+	protected redraw(position: number[]) {
+		const [x, y] = position;
 		let drawables = this.getDrawables(x, y);
 		this.renderer.draw(x, y, drawables);
 	}
@@ -56,7 +81,7 @@ export default class Map {
 
 		let drawables: Drawable[] = [];
 
-		drawables.push(bg[x][y]);
+		drawables.push(bg.at(x, y));
 
 		let item = this.getItem(x, y);
 		item && drawables.push(item);
@@ -68,15 +93,3 @@ export default class Map {
 	}
 }
 
-function createBackground(width: number, height: number) {
-	let bg: Drawable[][] = [];
-	for (let x = 0; x < width; x++) {
-		let col: Drawable[] = [];
-		bg.push(col);
-		for (let y = 0; y < height; y++) {
-			let drawable = {position: [x, y], visual: {ch: ".", bg: "black", fg: "gray"}};
-			col.push(drawable);
-		}
-	}
-	return bg;
-}

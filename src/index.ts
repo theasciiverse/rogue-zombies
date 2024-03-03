@@ -1,5 +1,7 @@
 import Level from "./level.js";
 import Combo from "./renderer/combo.js";
+import Canvas from "./renderer/canvas.js";
+import DOM from "./renderer/dom.js";
 import "./random.js";
 
 

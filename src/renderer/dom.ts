@@ -39,4 +39,10 @@ export default class DOM extends Renderer {
 			if (visual.ch) { dnode.textContent = visual.ch; }
 		})
 	}
+
+	remove(drawable: Drawable) {
+		const { nodes } = this;
+		let dnode = nodes.get(drawable);
+		dnode && dnode.remove();
+	}
 }

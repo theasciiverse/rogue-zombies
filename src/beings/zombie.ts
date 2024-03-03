@@ -1,9 +1,108 @@
 import Being from "./being.js";
+import Item from "../items/item.js";
+import Zombies from "../zombies.js";
+import Map from "../map.js";
 
 
 const CHARS = ["z", "Z"];
 const COLORS = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
 
+type InvalidResult = { type: "invalid" };
+type PlayerResult = { type: "player" };
+type MoveResult = { type: "move", dist: number, position: number[] };
+type ItemResult = { type: "item", dist: number, item: Item };
+type MovementResult = InvalidResult | PlayerResult | MoveResult | ItemResult;
+
+
 export default class Zombie extends Being {
 	visual = {ch:CHARS.random(), fg:COLORS.random()};
+
+	constructor(map: Map, protected zombies: Zombies) {
+		super(map);
+	}
+
+	play(player: Being) {
+		const { position } = this;
+
+		let results = DIRS.map(dir => {
+			let x = position[0] + dir[0];
+			let y = position[1] + dir[1];
+			return this.getMovementResult(x, y, player);
+		});
+
+		let best = pickBestMovementResult(results);
+		if (!best)  {return; }
+
+		switch (best.type) {
+			case "player": player.damage(this); break;
+			case "move": this.position = best.position; break;
+			case "item": best.item.damage(this); break;
+		}
+	}
+
+	damage(source: Being | Item) {
+		this.zombies.kill(this, source);
+	}
+
+	protected getMovementResult(x: number, y: number, player: Being): MovementResult {
+		const { map, position } = this;
+		if (!map.isPositionValid(x, y)) { return {type:"invalid"}; } // out of area
+
+		// fixme indestructible items here
+
+		let being = map.getBeing(x, y);
+		if (being) { // surrounding zombies are ignored, player is immediately attacked
+			let type = (being == player ? "player" : "invalid");
+			return {type} as MovementResult;
+		}
+
+		let currentDistance = distance(position, player.position);
+		let dist = distance([x, y], player.position);
+		if (dist > currentDistance) { return {type:"invalid"}; } // pohorsime si
+
+		let item = map.getItem(x, y);
+
+		if (item && item.blocks) {
+			return {type:"item", dist, item};
+		} else {
+			return {type:"move", dist, position:[x, y]};
+		}
+	}
 }
+
+function pickBestMovementResult(results: MovementResult[]) {
+	let valid = results.filter(r => r.type != "invalid");
+	if (!valid.length) { return null; }
+
+	let player = valid.find(r => r.type == "player");
+	if (player) { return player; }
+
+	let moves = valid.filter(r => r.type == "move") as MoveResult[];
+	if (moves.length > 0) { return pickBestDistanceResult(moves); }
+
+	let items = valid.filter(r => r.type == "item") as ItemResult[];
+	return pickBestDistanceResult(items);
+}
+
+function pickBestDistanceResult(results: (MoveResult | ItemResult)[]) {
+	let distances = results.map(r => r.dist);
+	let best = Math.min(...distances);
+	return results.filter(r => r.dist == best).random();
+}
+
+function distance(pos1: number[], pos2: number[]) {
+	var dx = Math.abs(pos1[0]-pos2[0]);
+	var dy = Math.abs(pos1[1]-pos2[1]);
+	return Math.max(dx, dy);
+}
+
+const DIRS = [
+	[ 0, -1],
+	[ 1, -1],
+	[ 1,  0],
+	[ 1,  1],
+	[ 0,  1],
+	[-1,  1],
+	[-1,  0],
+	[-1, -1]
+];

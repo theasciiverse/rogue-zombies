@@ -1,10 +1,12 @@
 import Being from "./being.js";
 import Map from "../map.js";
 import * as keyboard from "../keyboard.js";
+import * as rules from "../rules.js";
 
 
 export default class Player extends Being {
 	visual = {ch:"@", fg:"red"};
+	_hp = rules.PLAYER_HP;
 
 	constructor(protected map: Map) {
 		super(map);
@@ -34,16 +36,37 @@ export default class Player extends Being {
 		let x = position[0]+dx;
 		let y = position[1]+dy;
 
-		if (x < 0 || x >= map.width || y < 0 || y >= map.height) { return false; }
+		if (!map.isPositionValid(x, y)) { return false; }
 
 		let being = map.getBeing(x, y);
 		let item = map.getItem(x, y);
+
+		if (being) { // FIXME debug
+			being.damage(this);
+			return true;
+		}
 
 		if (being) { return false; } // FIXME neco napsat
 		if (item && item.blocks) { return false; } // FIXME neco napsat
 
 		this.position = [x, y];
 		return true;
+	}
+
+	get hp() { return this._hp; }
+
+	damage(source: Being) {
+		const { map, position } = this;
+		this._hp -= 1;
+
+		if (this.hp == 0) {
+			map.removeBeing(this);
+			let corpse = this.toCorpse();
+			map.setBackground(position[0], position[1], corpse);
+			console.log("Player killed by", source, "HP:", this.hp);
+		} else {
+			console.log("Player damaged by", source, "HP:", this.hp);
+		}
 	}
 }
 

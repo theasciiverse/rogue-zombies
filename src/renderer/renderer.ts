@@ -39,4 +39,6 @@ export default class Renderer {
 	}
 
 	draw(x: number, y: number, drawables: Drawable[]) {}
+
+	remove(drawable: Drawable) {}
 }

@@ -13,6 +13,12 @@ var Being = class {
     this._position = position;
     map.changed(this);
   }
+  damage(source) {
+    console.log("being", this, "damaged by", source);
+  }
+  toCorpse() {
+    return { ch: "%", fg: this.visual.fg };
+  }
 };
 
 // src/keyboard.ts
@@ -41,6 +47,10 @@ async function readKey(allowed = []) {
   });
 }
 
+// src/rules.ts
+var ZOMBIE_MOVE_CHANCE = 0.5;
+var PLAYER_HP = 3;
+
 // src/beings/player.ts
 var Player = class extends Being {
   constructor(map) {
@@ -48,6 +58,7 @@ var Player = class extends Being {
     this.map = map;
   }
   visual = { ch: "@", fg: "red" };
+  _hp = PLAYER_HP;
   async play() {
     while (true) {
       let key = await readKey();
@@ -69,11 +80,15 @@ var Player = class extends Being {
     const { position, map } = this;
     let x = position[0] + dx;
     let y = position[1] + dy;
-    if (x < 0 || x >= map.width || y < 0 || y >= map.height) {
+    if (!map.isPositionValid(x, y)) {
       return false;
     }
     let being = map.getBeing(x, y);
     let item = map.getItem(x, y);
+    if (being) {
+      being.damage(this);
+      return true;
+    }
     if (being) {
       return false;
     }
@@ -82,6 +97,21 @@ var Player = class extends Being {
     }
     this.position = [x, y];
     return true;
+  }
+  get hp() {
+    return this._hp;
+  }
+  damage(source) {
+    const { map, position } = this;
+    this._hp -= 1;
+    if (this.hp == 0) {
+      map.removeBeing(this);
+      let corpse = this.toCorpse();
+      map.setBackground(position[0], position[1], corpse);
+      console.log("Player killed by", source, "HP:", this.hp);
+    } else {
+      console.log("Player damaged by", source, "HP:", this.hp);
+    }
   }
 };
 var MOVEMENT = {
@@ -103,8 +133,96 @@ var MOVEMENT = {
 var CHARS = ["z", "Z"];
 var COLORS = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
 var Zombie = class extends Being {
+  constructor(map, zombies) {
+    super(map);
+    this.zombies = zombies;
+  }
   visual = { ch: CHARS.random(), fg: COLORS.random() };
+  play(player) {
+    const { position } = this;
+    let results = DIRS.map((dir) => {
+      let x = position[0] + dir[0];
+      let y = position[1] + dir[1];
+      return this.getMovementResult(x, y, player);
+    });
+    let best = pickBestMovementResult(results);
+    if (!best) {
+      return;
+    }
+    switch (best.type) {
+      case "player":
+        player.damage(this);
+        break;
+      case "move":
+        this.position = best.position;
+        break;
+      case "item":
+        best.item.damage(this);
+        break;
+    }
+  }
+  damage(source) {
+    this.zombies.kill(this, source);
+  }
+  getMovementResult(x, y, player) {
+    const { map, position } = this;
+    if (!map.isPositionValid(x, y)) {
+      return { type: "invalid" };
+    }
+    let being = map.getBeing(x, y);
+    if (being) {
+      let type = being == player ? "player" : "invalid";
+      return { type };
+    }
+    let currentDistance = distance(position, player.position);
+    let dist = distance([x, y], player.position);
+    if (dist > currentDistance) {
+      return { type: "invalid" };
+    }
+    let item = map.getItem(x, y);
+    if (item && item.blocks) {
+      return { type: "item", dist, item };
+    } else {
+      return { type: "move", dist, position: [x, y] };
+    }
+  }
 };
+function pickBestMovementResult(results) {
+  let valid = results.filter((r) => r.type != "invalid");
+  if (!valid.length) {
+    return null;
+  }
+  let player = valid.find((r) => r.type == "player");
+  if (player) {
+    return player;
+  }
+  let moves = valid.filter((r) => r.type == "move");
+  if (moves.length > 0) {
+    return pickBestDistanceResult(moves);
+  }
+  let items = valid.filter((r) => r.type == "item");
+  return pickBestDistanceResult(items);
+}
+function pickBestDistanceResult(results) {
+  let distances = results.map((r) => r.dist);
+  let best = Math.min(...distances);
+  return results.filter((r) => r.dist == best).random();
+}
+function distance(pos1, pos2) {
+  var dx = Math.abs(pos1[0] - pos2[0]);
+  var dy = Math.abs(pos1[1] - pos2[1]);
+  return Math.max(dx, dy);
+}
+var DIRS = [
+  [0, -1],
+  [1, -1],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [-1, 1],
+  [-1, 0],
+  [-1, -1]
+];
 
 // src/zombies.ts
 var Zombies = class {
@@ -116,7 +234,10 @@ var Zombies = class {
   rounds = 0;
   spawnPotential = 1;
   play() {
+    const { zombies, player } = this;
     this.rounds++;
+    let activeZombies = zombies.filter((_) => Math.random() > ZOMBIE_MOVE_CHANCE);
+    activeZombies.forEach((z) => z.play(player));
     let spawnPotential = this.updateSpawnPotential();
     if (spawnPotential >= 1) {
       let amount = Math.floor(this.spawnPotential);
@@ -124,13 +245,21 @@ var Zombies = class {
       this.spawn(amount);
     }
   }
+  kill(zombie, source) {
+    const { map } = this;
+    console.log("zombie", zombie, "killed by", source);
+    this.zombies = this.zombies.filter((z) => z != zombie);
+    map.removeBeing(zombie);
+    let corpse = zombie.toCorpse();
+    map.setBackground(zombie.position[0], zombie.position[1], corpse);
+  }
   spawn(amount) {
     const { zombies, map } = this;
     console.log("spawning", amount);
     let corners = getCorners(map);
     for (let i = 0; i < amount; i++) {
       let corner = corners.random();
-      let zombie = new Zombie(map);
+      let zombie = new Zombie(map, this);
       zombie.position = corner.slice();
       zombies.push(zombie);
       map.addBeing(zombie);
@@ -151,30 +280,70 @@ function getCorners(map) {
   ];
 }
 
+// src/background.ts
+var seed = -Math.random() * 100;
+var Background = class {
+  data = [];
+  constructor(width, height) {
+    const { data } = this;
+    for (let x = 0; x < width; x++) {
+      let col = [];
+      data.push(col);
+      for (let y = 0; y < height; y++) {
+        let drawable = { position: [x, y], visual: { ch: ".", bg: bgColor(x, y), fg: "#222" } };
+        col.push(drawable);
+      }
+    }
+  }
+  set(x, y, visual) {
+    Object.assign(this.data[x][y].visual, visual);
+  }
+  at(x, y) {
+    return this.data[x][y];
+  }
+};
+function bgColor(x, y) {
+  x += seed;
+  y += seed;
+  let h = Math.sin(x * y * 1e-3);
+  h = 60 + h * 30;
+  let s = Math.cos(x * y * 3e-3);
+  s = 50 + s * 20;
+  let l = 15;
+  return `hsl(${h}, ${s}%, ${l}%)`;
+}
+
 // src/map.ts
 var Map2 = class {
   constructor(width, height, renderer) {
     this.width = width;
     this.height = height;
     this.renderer = renderer;
-    this.bg = createBackground(width, height);
+    this.bg = new Background(width, height);
     for (let i = 0; i < width; i++) {
       for (let j = 0; j < height; j++) {
-        this.redraw(i, j);
+        this.redraw([i, j]);
       }
     }
   }
   beings = [];
   items = [];
-  bg = [];
+  bg;
   oldPositions = new window.Map();
+  isPositionValid(x, y) {
+    const { width, height } = this;
+    if (x < 0 || x >= width || y < 0 || y >= height) {
+      return false;
+    }
+    return true;
+  }
   addBeing(being) {
     this.beings.push(being);
-    this.redraw(being.position[0], being.position[1]);
+    this.redraw(being.position);
   }
   addItem(item) {
     this.items.push(item);
-    this.redraw(item.position[0], item.position[1]);
+    this.redraw(item.position);
   }
   getBeing(x, y) {
     return this.beings.find((being) => being.position[0] == x && being.position[1] == y);
@@ -182,23 +351,38 @@ var Map2 = class {
   getItem(x, y) {
     return this.items.find((item) => item.position[0] == x && item.position[1] == y);
   }
+  removeBeing(being) {
+    this.beings = this.beings.filter((b) => b != being);
+    this.renderer.remove(being);
+    this.redraw(being.position);
+  }
+  removeItem(item) {
+    this.items = this.items.filter((i) => i != item);
+    this.renderer.remove(item);
+    this.redraw(item.position);
+  }
+  setBackground(x, y, visual) {
+    this.bg.set(x, y, visual);
+    this.redraw([x, y]);
+  }
   changed(what) {
     const { oldPositions } = this;
     let op = oldPositions.get(what);
     if (op) {
-      this.redraw(op[0], op[1]);
+      this.redraw(op);
     }
     oldPositions.set(what, what.position.slice());
-    this.redraw(what.position[0], what.position[1]);
+    this.redraw(what.position);
   }
-  redraw(x, y) {
+  redraw(position) {
+    const [x, y] = position;
     let drawables = this.getDrawables(x, y);
     this.renderer.draw(x, y, drawables);
   }
   getDrawables(x, y) {
     const { bg } = this;
     let drawables = [];
-    drawables.push(bg[x][y]);
+    drawables.push(bg.at(x, y));
     let item = this.getItem(x, y);
     item && drawables.push(item);
     let being = this.getBeing(x, y);
@@ -206,18 +390,6 @@ var Map2 = class {
     return drawables;
   }
 };
-function createBackground(width, height) {
-  let bg = [];
-  for (let x = 0; x < width; x++) {
-    let col = [];
-    bg.push(col);
-    for (let y = 0; y < height; y++) {
-      let drawable = { position: [x, y], visual: { ch: ".", bg: "black", fg: "gray" } };
-      col.push(drawable);
-    }
-  }
-  return bg;
-}
 
 // src/items/item.ts
 var Item = class {
@@ -229,22 +401,24 @@ var Item = class {
   }
   position;
   visual = { ch: "?", fg: "white" };
+  blocks = false;
+  damage(source) {
+    console.log("item", this, "damaged by", source);
+  }
 };
 
 // src/items/house.ts
 var House = class extends Item {
   visual = { ch: "#", fg: "saddlebrown", bg: "black" };
-  get blocks() {
-    return true;
-  }
+  blocks = true;
 };
 
 // src/level.ts
 var Level = class {
   constructor(config) {
     this.config = config;
-    let size = [20, 20];
-    let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth / 2, window.innerHeight / 2], [0.7, 1]);
+    let size = [40, 30];
+    let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth * 0.75, window.innerHeight * 0.75], [0.7, 1]);
     document.body.prepend(renderer.node);
     let map = new Map2(size[0], size[1], renderer);
     let player = new Player(map);
@@ -260,7 +434,7 @@ var Level = class {
     this.player = player;
     this.zombies = zombies;
     this.renderer = renderer;
-    console.log(this.tileSize);
+    console.log("tileSize", this.tileSize);
   }
   player;
   zombies;
@@ -273,7 +447,7 @@ var Level = class {
     }
   }
   get done() {
-    return false;
+    return this.player.hp <= 0;
   }
   get tileSize() {
     return this.renderer.tileSize;
@@ -306,6 +480,8 @@ var Renderer = class {
     return this.withTileSize(tileCount, tileSize2);
   }
   draw(x, y, drawables) {
+  }
+  remove(drawable) {
   }
 };
 
@@ -390,12 +566,22 @@ var DOM = class extends Renderer {
       }
     });
   }
+  remove(drawable) {
+    const { nodes } = this;
+    let dnode = nodes.get(drawable);
+    dnode && dnode.remove();
+  }
 };
 
 // src/renderer/combo.ts
-var Combo = class extends Renderer {
+var Combo = class _Combo extends Renderer {
   node = document.createElement("div");
   renderers;
+  static withAreaLimit(tileCount, area, aspectRatioRange) {
+    let halfArea = [area[0] / 2, area[1]];
+    let tileSize2 = computeTileSize(tileCount, halfArea, aspectRatioRange);
+    return new _Combo(tileCount, tileSize2);
+  }
   constructor(tileCount, tileSize2) {
     super(tileCount, tileSize2);
     const { node } = this;
@@ -405,8 +591,10 @@ var Combo = class extends Renderer {
     this.renderers = renderers;
   }
   draw(x, y, drawables) {
-    const { renderers } = this;
-    renderers.forEach((r) => r.draw(x, y, drawables));
+    this.renderers.forEach((r) => r.draw(x, y, drawables));
+  }
+  remove(drawable) {
+    this.renderers.forEach((r) => r.remove(drawable));
   }
 };
 

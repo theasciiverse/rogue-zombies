@@ -16,9 +16,9 @@ export default class Level {
 	protected renderer: Renderer;
 
 	constructor(protected config: Config) {
-		let size = [20, 20];
+		let size = [40, 30];
 
-		let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth/2, window.innerHeight/2], [0.7, 1.0])
+		let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth*.75, window.innerHeight*.75], [0.7, 1.0])
 		document.body.prepend(renderer.node);
 
 		let map = new Map(size[0], size[1], renderer);
@@ -38,7 +38,7 @@ export default class Level {
 		this.player = player;
 		this.zombies = zombies;
 		this.renderer = renderer;
-		console.log(this.tileSize);
+		console.log("tileSize", this.tileSize);
 	}
 
 	async play() {
@@ -51,7 +51,7 @@ export default class Level {
 	}
 
 	get done() {
-		return false;
+		return this.player.hp <= 0;
 	}
 
 	get tileSize() { return this.renderer.tileSize; }
