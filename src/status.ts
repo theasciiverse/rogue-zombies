@@ -1,15 +1,16 @@
 import Player from "./beings/player.js";
+import Level from "./level.js";
 import { ITEMS, ItemTemplate } from "./items/db.js"
 import * as rules from "./rules.js"
 
 
 const node = document.querySelector<HTMLElement>("#status")!;
 
-export function init(tileSize: number[]) {
+export function init(level: Level, charWidth: number) {
+	const { tileSize } = level;
 	node.style.setProperty("--tile-width", `${tileSize[0]}px`);
 	node.style.setProperty("--tile-height", `${tileSize[1]}px`);
-	let width = measureCharWidth();
-	node.style.setProperty("--char-width", `${width}px`);
+	node.style.setProperty("--char-width", `${charWidth}px`);
 }
 
 export function update(player: Player) {
@@ -77,15 +78,5 @@ function buildItem(it: ItemTemplate, player: Player) {
 	node.append(kbd, it.short || it.name, c, "  ");
 
 	return node;
-}
-
-function measureCharWidth() {
-	let span = document.createElement("span");
-	span.textContent = "P";
-	node.append(span);
-
-	let rect = span.getBoundingClientRect();
-	span.remove();
-	return rect.width;
 }
 

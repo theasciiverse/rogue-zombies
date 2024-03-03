@@ -51,6 +51,51 @@ async function readKey(allowed = []) {
 var ZOMBIE_MOVE_CHANCE = 0.5;
 var PLAYER_HP = 3;
 
+// src/log.ts
+var node = document.querySelector("#log");
+var history = [];
+var limit;
+function computeHistoryLength() {
+  return history.reduce((acc, h) => acc + h.length, 0);
+}
+async function add(str) {
+  let span = document.createElement("span");
+  span.textContent = str + " ";
+  let length = str.length + 1;
+  let wouldBeLength = computeHistoryLength() + length;
+  if (wouldBeLength > limit) {
+    let more = document.createElement("span");
+    let kbd = document.createElement("kbd");
+    kbd.textContent = "space";
+    more.append("...", kbd);
+    node.append(more);
+    while (true) {
+      let key = await readKey();
+      if (key.code == "Space") {
+        break;
+      }
+    }
+    more.remove();
+  }
+  history.push({ node: span, length });
+  node.append(span);
+  let totalLength = computeHistoryLength();
+  while (totalLength > limit) {
+    let first = history.shift();
+    first.node.remove();
+    totalLength -= first.length;
+  }
+}
+function init(level2, charWidth) {
+  const { tileSize, map } = level2;
+  limit = map.width * 2 - 15;
+  node.style.setProperty("--tile-width", `${tileSize[0]}px`);
+  node.style.setProperty("--tile-height", `${tileSize[1]}px`);
+  node.style.setProperty("--char-width", `${charWidth}px`);
+  node.style.setProperty("--char-width", `${charWidth}px`);
+  node.style.setProperty("--map-width", String(map.width));
+}
+
 // src/items/db.ts
 var ITEMS = [{
   id: "crowbar",
@@ -107,12 +152,12 @@ var ITEMS = [{
 }];
 
 // src/status.ts
-var node = document.querySelector("#status");
-function init(tileSize) {
-  node.style.setProperty("--tile-width", `${tileSize[0]}px`);
-  node.style.setProperty("--tile-height", `${tileSize[1]}px`);
-  let width = measureCharWidth();
-  node.style.setProperty("--char-width", `${width}px`);
+var node2 = document.querySelector("#status");
+function init2(level2, charWidth) {
+  const { tileSize } = level2;
+  node2.style.setProperty("--tile-width", `${tileSize[0]}px`);
+  node2.style.setProperty("--tile-height", `${tileSize[1]}px`);
+  node2.style.setProperty("--char-width", `${charWidth}px`);
 }
 function update(player) {
   let items = ITEMS.map((it) => buildItem(it, player));
@@ -129,51 +174,43 @@ function update(player) {
     "  ",
     buildKey("?", "Help")
   ];
-  node.replaceChildren(...items, "\n", ...status);
+  node2.replaceChildren(...items, "\n", ...status);
 }
 function buildHP(curent, max) {
-  let node2 = document.createElement("span");
-  node2.className = "hp";
+  let node3 = document.createElement("span");
+  node3.className = "hp";
   let str = "";
   for (let i = 0; i < max; i++) {
     str += i < curent ? "\u2665" : "\u2661";
   }
-  node2.textContent = str;
-  return node2;
+  node3.textContent = str;
+  return node3;
 }
 function buildMoney(money) {
-  let node2 = document.createElement("span");
-  node2.className = "money";
-  node2.textContent = String(money);
-  return node2;
+  let node3 = document.createElement("span");
+  node3.className = "money";
+  node3.textContent = String(money);
+  return node3;
 }
 function buildKey(key, text) {
-  let node2 = document.createElement("span");
+  let node3 = document.createElement("span");
   let kbd = document.createElement("kbd");
   kbd.textContent = key;
-  node2.append(kbd, text);
-  return node2;
+  node3.append(kbd, text);
+  return node3;
 }
 function buildItem(it, player) {
-  let node2 = document.createElement("span");
-  node2.className = "item";
+  let node3 = document.createElement("span");
+  node3.className = "item";
   let count = player.getItem(it.id);
-  node2.classList.toggle("disabled", count == 0);
+  node3.classList.toggle("disabled", count == 0);
   let kbd = document.createElement("kbd");
   kbd.textContent = it.key;
   let c = document.createElement("span");
   c.className = "count";
   c.textContent = count == Infinity ? "\u221E" : String(count);
-  node2.append(kbd, it.short || it.name, c, "  ");
-  return node2;
-}
-function measureCharWidth() {
-  let span = document.createElement("span");
-  span.textContent = "P";
-  node.append(span);
-  let rect = span.getBoundingClientRect();
-  span.remove();
-  return rect.width;
+  node3.append(kbd, it.short || it.name, c, "  ");
+  return node3;
 }
 
 // src/dialog.ts
@@ -342,6 +379,10 @@ var Player = class extends Being {
     }
     if (key.key == "?") {
       await help();
+      return false;
+    }
+    if (key.code == "KeyL") {
+      await add(String(Math.random()));
       return false;
     }
     return false;
@@ -688,8 +729,8 @@ var House = class extends Item {
 var Level = class {
   constructor(config) {
     this.config = config;
-    let size = [40, 30];
-    let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth * 0.75, window.innerHeight * 0.75], [0.7, 1]);
+    let size = [45, 30];
+    let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth * 0.9, window.innerHeight * 0.9], [0.7, 1]);
     document.body.prepend(renderer.node);
     let map = new Map2(size[0], size[1], renderer);
     let player = new Player(map);
@@ -702,6 +743,7 @@ var Level = class {
       new House(map, 12, 11)
     ].forEach((h) => map.addItem(h));
     let zombies = new Zombies(map, player);
+    this.map = map;
     this.player = player;
     this.zombies = zombies;
     this.renderer = renderer;
@@ -710,6 +752,7 @@ var Level = class {
   player;
   zombies;
   renderer;
+  map;
   async play() {
     const { player, zombies } = this;
     while (!this.done) {
@@ -765,11 +808,11 @@ var Canvas = class extends Renderer {
     super(tileCount, tileSize);
     const width = tileCount[0] * tileSize[0];
     const height = tileCount[1] * tileSize[1];
-    const { node: node2, ctx } = this;
-    node2.width = width * DPR;
-    node2.height = height * DPR;
-    node2.style.width = `${width}px`;
-    node2.style.height = `${height}px`;
+    const { node: node3, ctx } = this;
+    node3.width = width * DPR;
+    node3.height = height * DPR;
+    node3.style.width = `${width}px`;
+    node3.style.height = `${height}px`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = `bold ${tileSize[1]}px input`;
@@ -806,20 +849,20 @@ var DOM = class extends Renderer {
   nodes = /* @__PURE__ */ new Map();
   constructor(tileCount, tileSize) {
     super(tileCount, tileSize);
-    const { node: node2 } = this;
-    node2.className = "renderer";
-    node2.style.setProperty("--tile-width", `${tileSize[0]}px`);
-    node2.style.setProperty("--tile-height", `${tileSize[1]}px`);
-    node2.style.width = `${tileCount[0] * tileSize[0]}px`;
-    node2.style.height = `${tileCount[1] * tileSize[1]}px`;
+    const { node: node3 } = this;
+    node3.className = "renderer";
+    node3.style.setProperty("--tile-width", `${tileSize[0]}px`);
+    node3.style.setProperty("--tile-height", `${tileSize[1]}px`);
+    node3.style.width = `${tileCount[0] * tileSize[0]}px`;
+    node3.style.height = `${tileCount[1] * tileSize[1]}px`;
   }
   draw(x, y, drawables) {
-    const { node: node2, nodes } = this;
+    const { node: node3, nodes } = this;
     drawables.forEach((d, i) => {
       let dnode = nodes.get(d);
       if (!dnode) {
         dnode = document.createElement("div");
-        node2.append(dnode);
+        node3.append(dnode);
         nodes.set(d, dnode);
       }
       dnode.style.setProperty("--x", String(x));
@@ -855,10 +898,10 @@ var Combo = class _Combo extends Renderer {
   }
   constructor(tileCount, tileSize) {
     super(tileCount, tileSize);
-    const { node: node2 } = this;
-    node2.className = "combo";
+    const { node: node3 } = this;
+    node3.className = "combo";
     let renderers = [Canvas, DOM].map((r) => new r(tileCount, tileSize));
-    node2.append(...renderers.map((r) => r.node));
+    node3.append(...renderers.map((r) => r.node));
     this.renderers = renderers;
   }
   draw(x, y, drawables) {
@@ -882,5 +925,16 @@ Array.prototype.random = function() {
 document.fonts.forEach((f) => f.load());
 await document.fonts.ready;
 var level = new Level({ Renderer: Combo });
-init(level.tileSize);
+function measureCharWidth(tileSize) {
+  let span = document.createElement("span");
+  span.style.fontSize = `${tileSize[1]}px`;
+  span.textContent = "P";
+  document.body.append(span);
+  let rect = span.getBoundingClientRect();
+  span.remove();
+  return rect.width;
+}
+var chw = measureCharWidth(level.tileSize);
+init2(level, chw);
+init(level, chw);
 level.play();

@@ -14,11 +14,12 @@ export default class Level {
 	protected player: Player;
 	protected zombies: Zombies;
 	protected renderer: Renderer;
+	readonly map: Map;
 
 	constructor(protected config: Config) {
-		let size = [40, 30];
+		let size = [45, 30];
 
-		let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth*.75, window.innerHeight*.75], [0.7, 1.0])
+		let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth*.9, window.innerHeight*.9], [0.7, 1.0])
 		document.body.prepend(renderer.node);
 
 		let map = new Map(size[0], size[1], renderer);
@@ -35,6 +36,7 @@ export default class Level {
 
 		let zombies = new Zombies(map, player);
 
+		this.map = map;
 		this.player = player;
 		this.zombies = zombies;
 		this.renderer = renderer;

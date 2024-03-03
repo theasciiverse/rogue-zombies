@@ -117,11 +117,15 @@ kbd::before, kbd::after { color: var(--brace-color); }
 kbd::before { content: "["; }
 kbd::after { content: "]"; }
 
-#status {
-	white-space: pre;
+#status, #log {
 	font-size: var(--tile-height);
 	letter-spacing: calc(var(--tile-width) - var(--char-width));
 	padding-left: calc((var(--tile-width) - var(--char-width))/2);
+	width: calc(var(--tile-width) * var(--map-width));
+}
+
+#status {
+	white-space: pre;
 }
 
 #status .hp {
@@ -133,4 +137,9 @@ kbd::after { content: "]"; }
 #status .count::before {
 	content: "×";
 	opacity: 0.5;
+}
+
+#log {
+	white-space: pre-wrap;
+	word-break: break-all;
 }

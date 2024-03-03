@@ -2,6 +2,7 @@ import Being from "./being.js";
 import Map from "../map.js";
 import * as keyboard from "../keyboard.js";
 import * as rules from "../rules.js";
+import * as log from "../log.js";
 import * as status from "../status.js";
 import { help, buy } from "../dialog.js";
 
@@ -59,6 +60,11 @@ export default class Player extends Being {
 
 		if (key.key == "?") {
 			await help();
+			return false;
+		}
+
+		if (key.code == "KeyL") {
+			await log.add(String(Math.random()));
 			return false;
 		}
 
