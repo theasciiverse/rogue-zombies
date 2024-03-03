@@ -68,7 +68,7 @@ export async function help() {
 
 export async function buy(player: Player) {
 	while (true) {
-		let dialog = new Dialog();
+		let dialog = new Dialog("Buy items");
 		dialog.addKey({id:"", key: "Escape"});
 
 		let table = buildItemTable(player, dialog);
@@ -79,29 +79,44 @@ export async function buy(player: Player) {
 		if (result == "") {
 			break;
 		} else {
-			console.log("buy", result);
-//			player.setItem(result, player.getItem(result)+1);
+			let it = ITEMS.find(it => it.id == result)!;
+			let price = it.price;
+			player.setItem(result, player.getItem(result)+it.amount);
+			player.money -= price;
 		}
 	}
 }
 
 function buildItemTable(player: Player, dialog: Dialog) {
 	let table = document.createElement("table");
-
+	table.innerHTML = TABLE;
 	let rows = ITEMS.map(def => buildItemRow(def, player, dialog));
-	table.append(...rows);
+	table.tBodies[0].append(...rows);
 	return table;
 }
 
 function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog) {
 	let row = document.createElement("tr");
 	let disabled = (item.price > player.money);
+	if (!item.price)  { disabled = true; }
 	row.classList.toggle("disabled", disabled);
 
-	let key = row.insertCell();
-	key.textContent = item.key;
+	let kbd = document.createElement("kbd");
+	kbd.textContent = item.key;
+	row.insertCell().append(kbd);
 
-	row.insertCell().textContent = item.id;
+	row.insertCell().textContent = item.name;
+
+	if (item.price > 0) {
+		let price = document.createElement("span");
+		price.className = "price";
+		price.textContent = String(item.price);
+		row.insertCell().append(price, " for ", String(item.amount));
+	} else {
+		row.insertCell().textContent = "-free-";
+	}
+
+	row.insertCell().textContent = item.description;
 
 	if (!disabled) {
 		dialog.addKey({id: item.id, code: `Numpad${item.key}`});
@@ -112,4 +127,14 @@ function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog) {
 }
 
 
-// 1 Crow(3)  2 Barr(3)  3 Rake(4)  4 Mine(2)  5 Bazoo(6x)  6 Wire(6x)  7 El.fence(15)
+const TABLE = `
+<thead>
+	<tr>
+		<th>Key</th>
+		<th>Item</th>
+		<th>Price</th>
+		<th></th>
+	</tr>
+</thead>
+<tbody></tbody>
+`

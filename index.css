@@ -1,3 +1,11 @@
+body {
+	background-color: black;
+	font-family: input;
+	--color: #c0c0c0;
+	--dimmed: #888;
+	color: var(--color);
+}
+
 @font-face {
 	font-family: input;
 	font-weight: normal;
@@ -26,10 +34,6 @@
 	src: url("font/Input-BoldItalic.ttf") format("truetype");
 }
 
-p {
-	font-family: input;
-}
-
 .renderer {
 	position: relative;
 	font-family: input;
@@ -54,7 +58,12 @@ p {
 
 dialog {
 	padding: 0;
-	border: none;
+	border-style: solid;
+	border-width: 1em 1ch;
+	border-color: #888;
+	outline: none;
+	color: inherit;
+	background-color: inherit;
 /*
 	&::backdrop {
 		background-color: transparent;
@@ -64,10 +73,64 @@ dialog {
 */
 }
 
-dialog tr.disabled {
-	opacity: 0.5;
+.disabled {
+	color: var(--dimmed);
 }
 
 dialog tr:not(.disabled) td:first-child {
 	font-weight: bold;
+}
+
+dialog::backdrop {
+	background-color: rgba(0, 0, 0, 0.5);
+}
+
+table {
+	border-collapse: collapse;
+}
+
+td {
+	padding: 0 1ch;
+}
+
+.price::after { content: "$"; }
+tr:not(.disabled) .price { color: gold; }
+.disabled .price { color: red; }
+
+th {
+	text-align: left;
+}
+
+kbd {
+	font: inherit;
+	color: lime;
+	font-weight: bold;
+	--brace-color: var(--color);
+}
+
+.disabled kbd {
+	color: var(--dimmed);
+	--brace-color: var(--dimmed);
+}
+
+kbd::before, kbd::after { color: var(--brace-color); }
+kbd::before { content: "["; }
+kbd::after { content: "]"; }
+
+#status {
+	white-space: pre;
+	font-size: var(--tile-height);
+	letter-spacing: calc(var(--tile-width) - var(--char-width));
+	padding-left: calc((var(--tile-width) - var(--char-width))/2);
+}
+
+#status .hp {
+	color: red;
+}
+
+#status .money { color: gold; }
+#status .money::after { content: "$"; }
+#status .count::before {
+	content: "×";
+	opacity: 0.5;
 }

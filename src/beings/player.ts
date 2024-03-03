@@ -2,16 +2,23 @@ import Being from "./being.js";
 import Map from "../map.js";
 import * as keyboard from "../keyboard.js";
 import * as rules from "../rules.js";
+import * as status from "../status.js";
 import { help, buy } from "../dialog.js";
 
 
 export default class Player extends Being {
 	visual = {ch:"@", fg:"red"};
 	_hp = rules.PLAYER_HP;
-	_money = 1;
+	_money = 10;
+	items = new window.Map<string, number>();
 
 	constructor(protected map: Map) {
 		super(map);
+		status.update(this);
+
+		this._hp--;
+		this.setItem("crowbar", Infinity);
+		this.setItem("rake", 5);
 	}
 
 	async play() {
@@ -24,17 +31,20 @@ export default class Player extends Being {
 		}
 	}
 
-	getItem(type: string) {
-
+	getItem(id: string) {
+		return this.items.get(id) || 0;
 	}
 
-	setItem(type: string, amount: number) {
-		// FIXME
+	setItem(id: string, amount: number) {
+		this.items.set(id, amount);
+		status.update(this);
 	}
 
-	// fixme
 	get money() { return this._money; }
-	set money(money: number) { this._money = money; }
+	set money(money: number) {
+		this._money = money;
+		status.update(this);
+	}
 
 	protected async processKey(key: KeyboardEvent) {
 		if (key.code in MOVEMENT) {
@@ -82,6 +92,7 @@ export default class Player extends Being {
 	damage(source: Being) {
 		const { map, position } = this;
 		this._hp -= 1;
+		status.update(this);
 
 		if (this.hp == 0) {
 			map.removeBeing(this);
