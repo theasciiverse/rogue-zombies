@@ -51,3 +51,23 @@ p {
 .combo {
 	display: flex;
 }
+
+dialog {
+	padding: 0;
+	border: none;
+/*
+	&::backdrop {
+		background-color: transparent;
+		-webkit-backdrop-filter: blur(4px);
+		backdrop-filter: blur(4px);
+	}
+*/
+}
+
+dialog tr.disabled {
+	opacity: 0.5;
+}
+
+dialog tr:not(.disabled) td:first-child {
+	font-weight: bold;
+}

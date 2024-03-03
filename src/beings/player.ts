@@ -2,11 +2,13 @@ import Being from "./being.js";
 import Map from "../map.js";
 import * as keyboard from "../keyboard.js";
 import * as rules from "../rules.js";
+import { help, buy } from "../dialog.js";
 
 
 export default class Player extends Being {
 	visual = {ch:"@", fg:"red"};
 	_hp = rules.PLAYER_HP;
+	_money = 1;
 
 	constructor(protected map: Map) {
 		super(map);
@@ -17,15 +19,37 @@ export default class Player extends Being {
 			let key = await keyboard.readKey();
 			console.log(key);
 
-			let acted = this.processKey(key);
+			let acted = await this.processKey(key);
 			if (acted) { break; }
 		}
 	}
 
-	protected processKey(key: KeyboardEvent) {
+	getItem(type: string) {
+
+	}
+
+	setItem(type: string, amount: number) {
+		// FIXME
+	}
+
+	// fixme
+	get money() { return this._money; }
+	set money(money: number) { this._money = money; }
+
+	protected async processKey(key: KeyboardEvent) {
 		if (key.code in MOVEMENT) {
 			let diff = MOVEMENT[key.code] as [number, number];
 			return this.moveBy(...diff);
+		}
+
+		if (key.code == "KeyB") {
+			await buy(this);
+			return false;
+		}
+
+		if (key.key == "?") {
+			await help();
+			return false;
 		}
 
 		return false;
@@ -91,3 +115,4 @@ const MOVEMENT = {
 
 	"Numpad3": [1, 1]
 }
+

@@ -51,6 +51,106 @@ async function readKey(allowed = []) {
 var ZOMBIE_MOVE_CHANCE = 0.5;
 var PLAYER_HP = 3;
 
+// src/items/db.ts
+var ITEMS = [{
+  id: "crowbar",
+  key: "1",
+  price: 0
+}, {
+  id: "mine",
+  key: "2",
+  price: 2
+}];
+
+// src/dialog.ts
+var Dialog = class {
+  dialog = document.createElement("dialog");
+  resolve;
+  keys = [];
+  append(...nodes) {
+    this.dialog.append(...nodes);
+  }
+  async show() {
+    const { dialog } = this;
+    document.body.append(dialog);
+    dialog.showModal();
+    while (true) {
+      let event = await readKey();
+      if (event.key == "Escape") {
+        event.preventDefault();
+      }
+      let id = this.matchKeyEvent(event);
+      if (id !== null) {
+        dialog.close();
+        dialog.remove();
+        return id;
+      }
+    }
+  }
+  addKey(key) {
+    this.keys.push(key);
+  }
+  matchKeyEvent(event) {
+    let key = this.keys.find((key2) => {
+      if ("key" in key2 && key2.key != event.key) {
+        return false;
+      }
+      if ("code" in key2 && key2.code != event.code) {
+        return false;
+      }
+      return true;
+    });
+    return key ? key.id : null;
+  }
+};
+async function help() {
+  while (true) {
+    let html = "Help!";
+    let dialog = new Dialog();
+    dialog.append(html);
+    dialog.addKey({ id: "", key: "Escape" });
+    dialog.addKey({ id: "one", key: "1" });
+    let result = await dialog.show();
+    console.log("dialog", result);
+    if (result == "") {
+      break;
+    }
+  }
+}
+async function buy(player) {
+  while (true) {
+    let dialog = new Dialog();
+    dialog.addKey({ id: "", key: "Escape" });
+    let table = buildItemTable(player, dialog);
+    dialog.append("Buy", table);
+    let result = await dialog.show();
+    if (result == "") {
+      break;
+    } else {
+      console.log("buy", result);
+    }
+  }
+}
+function buildItemTable(player, dialog) {
+  let table = document.createElement("table");
+  let rows = ITEMS.map((def) => buildItemRow(def, player, dialog));
+  table.append(...rows);
+  return table;
+}
+function buildItemRow(item, player, dialog) {
+  let row = document.createElement("tr");
+  let disabled = item.price > player.money;
+  row.classList.toggle("disabled", disabled);
+  let key = row.insertCell();
+  key.textContent = item.key;
+  row.insertCell().textContent = item.id;
+  if (!disabled) {
+    dialog.addKey({ id: item.id, code: `Numpad${item.key}` });
+    dialog.addKey({ id: item.id, code: `Digit${item.key}` });
+  }
+  return row;
+}
+
 // src/beings/player.ts
 var Player = class extends Being {
   constructor(map) {
@@ -59,20 +159,40 @@ var Player = class extends Being {
   }
   visual = { ch: "@", fg: "red" };
   _hp = PLAYER_HP;
+  _money = 1;
   async play() {
     while (true) {
       let key = await readKey();
       console.log(key);
-      let acted = this.processKey(key);
+      let acted = await this.processKey(key);
       if (acted) {
         break;
       }
     }
   }
-  processKey(key) {
+  getItem(type) {
+  }
+  setItem(type, amount) {
+  }
+  // fixme
+  get money() {
+    return this._money;
+  }
+  set money(money) {
+    this._money = money;
+  }
+  async processKey(key) {
     if (key.code in MOVEMENT) {
       let diff = MOVEMENT[key.code];
       return this.moveBy(...diff);
+    }
+    if (key.code == "KeyB") {
+      await buy(this);
+      return false;
+    }
+    if (key.key == "?") {
+      await help();
+      return false;
     }
     return false;
   }
