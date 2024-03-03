@@ -1,0 +1,9 @@
+{
+	"scripts": {
+		"build": "esbuild --bundle --outfile=index.js --format=esm src/index.ts",
+		"watch": "while inotifywait -e MODIFY -r src; do npm run build ; done"
+	},
+	"devDependencies": {
+		"esbuild": "^0.20.1"
+	}
+}
