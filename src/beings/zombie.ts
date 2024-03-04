@@ -21,6 +21,8 @@ export default class Zombie extends Being {
 		super(map);
 	}
 
+	get name() { return (this.visual.ch == "z"? "zombie" : "large zombie"); }
+
 	play(player: Being) {
 		const { position } = this;
 

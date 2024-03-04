@@ -20,6 +20,9 @@ var Being = class {
   }
   _position;
   visual = { ch: "?", fg: "lime" };
+  get name() {
+    return "?";
+  }
   get position() {
     return this._position;
   }
@@ -33,6 +36,31 @@ var Being = class {
   }
   toCorpse() {
     return { ch: "%", fg: this.visual.fg };
+  }
+};
+
+// src/items/item.ts
+var Item = class {
+  constructor(map) {
+    this.map = map;
+  }
+  _position;
+  visual = { ch: "?", fg: "white" };
+  blocks = false;
+  get position() {
+    return this._position;
+  }
+  set position(position) {
+    const { map } = this;
+    this._position = position;
+    map.changed(this);
+  }
+  async use(position, direction) {
+  }
+  activate(being) {
+  }
+  damage(source) {
+    console.log("item", this, "damaged by", source);
   }
 };
 
@@ -61,10 +89,6 @@ async function readKey(allowed = []) {
     window.addEventListener("keydown", onKeyDown, { signal });
   });
 }
-
-// src/rules.ts
-var ZOMBIE_MOVE_CHANCE = 0.5;
-var PLAYER_HP = 3;
 
 // src/metrics.ts
 var metrics_exports = {};
@@ -274,6 +298,25 @@ async function add(str) {
     totalLength -= first.length;
   }
 }
+function clear() {
+  node.replaceChildren();
+  history = [];
+}
+
+// src/items/crowbar.ts
+var Crowbar = class extends Item {
+  async use(position, direction) {
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    let being = this.map.getBeing(tx, ty);
+    if (being) {
+      await add(`You hit the ${being.name}.`);
+      being.damage(this);
+    } else {
+      await add("You swing the crowbar in the empty space.");
+    }
+  }
+};
 
 // src/items/db.ts
 var ITEMS = [{
@@ -282,7 +325,8 @@ var ITEMS = [{
   key: "1",
   price: 0,
   amount: 0,
-  description: "Melee range, unlimited uses. You already have this."
+  description: "Melee range, unlimited uses. You already have this.",
+  ctor: Crowbar
 }, {
   id: "barricade",
   name: "Wooden barricade",
@@ -329,6 +373,10 @@ var ITEMS = [{
   amount: 2,
   description: "Auto-connects to nearby fences. Has more health."
 }];
+
+// src/rules.ts
+var ZOMBIE_MOVE_CHANCE = 0.5;
+var PLAYER_HP = 3;
 
 // src/status.ts
 var node2 = document.querySelector("#status");
@@ -517,6 +565,9 @@ var Player = class extends Being {
   _hp = PLAYER_HP;
   _money = 10;
   items = new window.Map();
+  get hp() {
+    return this._hp;
+  }
   async play() {
     while (true) {
       let key = await readKey();
@@ -542,9 +593,14 @@ var Player = class extends Being {
     update(this);
   }
   async processKey(key) {
+    clear();
     if (key.code in MOVEMENT) {
       let diff = MOVEMENT[key.code];
       return this.moveBy(...diff);
+    }
+    if (key.code.startsWith("Digit")) {
+      let num = key.code.match(/\d/);
+      return num ? this.tryItem(num[0]) : false;
     }
     if (key.code == "KeyB") {
       await buy(this);
@@ -560,7 +616,7 @@ var Player = class extends Being {
     }
     return false;
   }
-  moveBy(dx, dy) {
+  async moveBy(dx, dy) {
     const { position, map } = this;
     let x = position[0] + dx;
     let y = position[1] + dy;
@@ -577,13 +633,33 @@ var Player = class extends Being {
       return false;
     }
     if (item && item.blocks) {
+      let it = ITEMS.find((it2) => item instanceof it2.ctor);
+      await add(`${it.name} blocks the way.`);
       return false;
     }
     this.position = [x, y];
     return true;
   }
-  get hp() {
-    return this._hp;
+  async tryItem(num) {
+    let it = ITEMS.find((it2) => it2.key == num);
+    if (!it) {
+      return false;
+    }
+    let amount = this.getItem(it.id);
+    if (!amount) {
+      await add(`You don't have any ${it.name}s.`);
+      return false;
+    }
+    let article = it.name.match(/^[aeiou]/i) ? "an" : "a";
+    let direction = await waitForDirection(`Use ${article} ${it.name}`);
+    if (!direction) {
+      return false;
+    }
+    const { map, position } = this;
+    clear();
+    let item = new it.ctor(map);
+    await item.use(position, direction);
+    return true;
   }
   damage(source) {
     const { map, position } = this;
@@ -599,6 +675,18 @@ var Player = class extends Being {
     }
   }
 };
+async function waitForDirection(prefix) {
+  await add(`${prefix}: pick a direction, ESC to abort...`);
+  while (true) {
+    let key = await readKey();
+    if (key.key == "Escape") {
+      await add("aborted.");
+      return null;
+    } else if (key.code in MOVEMENT) {
+      return MOVEMENT[key.code];
+    }
+  }
+}
 var MOVEMENT = {
   "Numpad7": [-1, -1],
   "ArrowDown": [0, 1],
@@ -623,6 +711,9 @@ var Zombie = class extends Being {
     this.zombies = zombies;
   }
   visual = { ch: CHARS.random(), fg: COLORS.random() };
+  get name() {
+    return this.visual.ch == "z" ? "zombie" : "large zombie";
+  }
   play(player) {
     const { position } = this;
     let results = DIRS.map((dir) => {
@@ -876,26 +967,14 @@ var Map2 = class {
   }
 };
 
-// src/items/item.ts
-var Item = class {
-  constructor(map, x, y) {
-    this.map = map;
-    this.x = x;
-    this.y = y;
-    this.position = [x, y];
-  }
-  position;
-  visual = { ch: "?", fg: "white" };
-  blocks = false;
-  damage(source) {
-    console.log("item", this, "damaged by", source);
-  }
-};
-
 // src/items/house.ts
 var House = class extends Item {
   visual = { ch: "#", fg: "saddlebrown", bg: "black" };
   blocks = true;
+  constructor(map, x, y) {
+    super(map);
+    this._position = [x, y];
+  }
 };
 
 // src/level.ts

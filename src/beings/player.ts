@@ -1,5 +1,6 @@
 import Being from "./being.js";
 import Map from "../map.js";
+import { ITEMS } from "../items/db.js";
 import * as keyboard from "../keyboard.js";
 import * as rules from "../rules.js";
 import * as log from "../log.js";
@@ -21,6 +22,8 @@ export default class Player extends Being {
 		this.setItem("crowbar", Infinity);
 		this.setItem("rake", 5);
 	}
+
+	get hp() { return this._hp; }
 
 	async play() {
 		while (true) {
@@ -48,9 +51,16 @@ export default class Player extends Being {
 	}
 
 	protected async processKey(key: KeyboardEvent) {
+		log.clear();
+
 		if (key.code in MOVEMENT) {
 			let diff = MOVEMENT[key.code] as [number, number];
 			return this.moveBy(...diff);
+		}
+
+		if (key.code.startsWith("Digit")) {
+			let num = key.code.match(/\d/);
+			return (num ? this.tryItem(num[0]) : false);
 		}
 
 		if (key.code == "KeyB") {
@@ -71,7 +81,7 @@ export default class Player extends Being {
 		return false;
 	}
 
-	protected moveBy(dx: number, dy: number): boolean {
+	protected async moveBy(dx: number, dy: number) {
 		const { position, map } = this;
 		let x = position[0]+dx;
 		let y = position[1]+dy;
@@ -87,13 +97,37 @@ export default class Player extends Being {
 		}
 
 		if (being) { return false; } // FIXME neco napsat
-		if (item && item.blocks) { return false; } // FIXME neco napsat
+		if (item && item.blocks) {
+			let it = ITEMS.find(it => item instanceof it.ctor)!;
+			await log.add(`${it.name} blocks the way.`);
+			return false;
+		}
 
 		this.position = [x, y];
 		return true;
 	}
 
-	get hp() { return this._hp; }
+	protected async tryItem(num: string) {
+		let it = ITEMS.find(it => it.key == num);
+		if (!it) { return false; } // number does not exist
+
+		let amount = this.getItem(it.id);
+		if (!amount) {
+			await log.add(`You don't have any ${it.name}s.`);
+			return false;
+		}
+
+		let article = (it.name.match(/^[aeiou]/i) ? "an" : "a");
+		let direction = await waitForDirection(`Use ${article} ${it.name}`);
+		if (!direction) { return false; }
+
+		const { map, position } = this;
+
+		log.clear();
+		let item = new it.ctor(map);
+		await item.use(position, direction);
+		return true;
+	}
 
 	damage(source: Being) {
 		const { map, position } = this;
@@ -107,6 +141,19 @@ export default class Player extends Being {
 			console.log("Player killed by", source, "HP:", this.hp);
 		} else {
 			console.log("Player damaged by", source, "HP:", this.hp);
+		}
+	}
+}
+
+async function waitForDirection(prefix: string): Promise<[number, number] | null> {
+	await log.add(`${prefix}: pick a direction, ESC to abort...`);
+	while (true) {
+		let key = await keyboard.readKey();
+		if (key.key == "Escape") {
+			await log.add("aborted.");
+			return null;
+		} else if (key.code in MOVEMENT) {
+			return MOVEMENT[key.code];
 		}
 	}
 }

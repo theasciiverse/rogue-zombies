@@ -3,15 +3,31 @@ import Being from "../beings/being.js";
 
 
 export default abstract class Item {
-	readonly position: number[];
+	protected _position: number[];
 	readonly visual = { ch: "?", fg: "white" };
 	readonly blocks: boolean = false;
 
-	constructor(protected map: Map, readonly x:number, readonly y:number) {
-		this.position = [x, y];
+	constructor(protected map: Map) {
 	}
 
-	damage(source: Being | Item) {
+	get position() { return this._position; }
+
+	set position(position: number[]) {
+		const { map } = this;
+
+		this._position = position;
+		map.changed(this);
+	}
+
+	async use(position: number[], direction: number[]) { // use from inventory
+
+	}
+
+	activate(being: Being) { // stepped on something
+
+	}
+
+	damage(source: Being | Item) {  // damaged by something
 		console.log("item", this, "damaged by", source);
 	}
 }

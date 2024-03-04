@@ -9,8 +9,9 @@ export default class Being {
 	constructor(protected map: Map) {
 	}
 
-	get position() { return this._position; }
+	get name() { return "?"; }
 
+	get position() { return this._position; }
 	set position(position: number[]) {
 		const { map } = this;
 

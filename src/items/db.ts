@@ -1,10 +1,14 @@
+import Crowbar from "./crowbar.js";
+
+
 export const ITEMS = [{
 	id: "crowbar",
 	name: "Crowbar",
 	key: "1",
 	price: 0,
 	amount: 0,
-	description: "Melee range, unlimited uses. You already have this."
+	description: "Melee range, unlimited uses. You already have this.",
+	ctor: Crowbar
 } as const, {
 	id: "barricade",
 	name: "Wooden barricade",
