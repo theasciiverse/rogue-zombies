@@ -7,7 +7,8 @@ import House from "./items/house.js";
 
 
 interface Config {
-	Renderer: typeof Renderer;
+	renderer: Renderer;
+	tileCount: number[];
 }
 
 export default class Level {
@@ -17,12 +18,7 @@ export default class Level {
 	readonly map: Map;
 
 	constructor(protected config: Config) {
-		let size = [45, 30];
-
-		let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth*.9, window.innerHeight*.9], [0.7, 1.0])
-		document.body.prepend(renderer.node);
-
-		let map = new Map(size[0], size[1], renderer);
+		let map = new Map(config.tileCount[0], config.tileCount[1], config.renderer);
 		let player = new Player(map);
 		player.position = [15,15];
 		map.addBeing(player);
@@ -39,8 +35,6 @@ export default class Level {
 		this.map = map;
 		this.player = player;
 		this.zombies = zombies;
-		this.renderer = renderer;
-		console.log("tileSize", this.tileSize);
 	}
 
 	async play() {
@@ -55,6 +49,4 @@ export default class Level {
 	get done() {
 		return this.player.hp <= 0;
 	}
-
-	get tileSize() { return this.renderer.tileSize; }
 }

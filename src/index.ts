@@ -1,32 +1,13 @@
-import Level from "./level.js";
-import Combo from "./renderer/combo.js";
-import Canvas from "./renderer/canvas.js";
-import DOM from "./renderer/dom.js";
 import "./random.js";
-import * as status from "./status.js";
-import * as log from "./log.js";
+import Level from "./level.js";
+import * as metrics from "./metrics.js";
 
 
-document.fonts.forEach(f => f.load());
-await document.fonts.ready;
+await metrics.init([45, 30]);
 
-let level = new Level({Renderer: Combo});
+const { tileCount, tileSize } = metrics;
+let renderer = new metrics.Renderer(tileCount, tileSize)
+document.body.prepend(renderer.node);
 
-function measureCharWidth(tileSize: number[]) {
-	let span = document.createElement("span");
-	span.style.fontSize = `${tileSize[1]}px`;
-	span.textContent = "P";
-	document.body.append(span);
-
-	let rect = span.getBoundingClientRect();
-	span.remove();
-	return rect.width;
-}
-
-
-let chw = measureCharWidth(level.tileSize);
-
-status.init(level, chw);
-log.init(level, chw);
-
+let level = new Level({renderer, tileCount});
 level.play();

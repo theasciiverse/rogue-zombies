@@ -1,17 +1,9 @@
 import Player from "./beings/player.js";
-import Level from "./level.js";
 import { ITEMS, ItemTemplate } from "./items/db.js"
 import * as rules from "./rules.js"
 
 
 const node = document.querySelector<HTMLElement>("#status")!;
-
-export function init(level: Level, charWidth: number) {
-	const { tileSize } = level;
-	node.style.setProperty("--tile-width", `${tileSize[0]}px`);
-	node.style.setProperty("--tile-height", `${tileSize[1]}px`);
-	node.style.setProperty("--char-width", `${charWidth}px`);
-}
 
 export function update(player: Player) {
 	let items = ITEMS.map(it => buildItem(it, player));

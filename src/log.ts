@@ -1,5 +1,5 @@
-import Level from "./level.js";
 import * as keyboard from "./keyboard.js";
+import * as metrics from "./metrics.js";
 
 
 interface HistoryItem {
@@ -9,7 +9,6 @@ interface HistoryItem {
 
 const node = document.querySelector<HTMLElement>("#log")!;
 let history: HistoryItem[] = [];
-let limit: number;
 
 function computeHistoryLength() {
 	return history.reduce((acc, h) => acc + h.length, 0);
@@ -21,6 +20,8 @@ export async function add(str: string) {
 	let length = str.length+1;
 
 	let wouldBeLength = computeHistoryLength() + length;
+	let limit = metrics.tileCount[0]*2 - 15;
+
 	if (wouldBeLength > limit) {
 		let more = document.createElement("span");
 		let kbd = document.createElement("kbd");
@@ -49,14 +50,4 @@ export async function add(str: string) {
 export function clear() {
 	node.replaceChildren();
 	history = [];
-}
-
-export function init(level: Level, charWidth: number) {
-	const { tileSize, map } = level;
-	limit = map.width * 2 - 15;
-	node.style.setProperty("--tile-width", `${tileSize[0]}px`);
-	node.style.setProperty("--tile-height", `${tileSize[1]}px`);
-	node.style.setProperty("--char-width", `${charWidth}px`);
-	node.style.setProperty("--char-width", `${charWidth}px`);
-	node.style.setProperty("--map-width", String(map.width));
 }

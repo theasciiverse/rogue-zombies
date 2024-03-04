@@ -105,15 +105,14 @@ kbd {
 	font: inherit;
 	color: lime;
 	font-weight: bold;
-	--brace-color: var(--color);
 }
 
-.disabled kbd {
+.disabled kbd { color: var(--dimmed); }
+
+kbd::before, kbd::after {
 	color: var(--dimmed);
-	--brace-color: var(--dimmed);
+	font-weight: normal;
 }
-
-kbd::before, kbd::after { color: var(--brace-color); }
 kbd::before { content: "["; }
 kbd::after { content: "]"; }
 

@@ -1,3 +1,18 @@
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// src/random.ts
+Array.prototype.random = function() {
+  const { length } = this;
+  if (!length) {
+    return null;
+  }
+  return this[Math.floor(Math.random() * length)];
+};
+
 // src/beings/being.ts
 var Being = class {
   constructor(map) {
@@ -51,10 +66,182 @@ async function readKey(allowed = []) {
 var ZOMBIE_MOVE_CHANCE = 0.5;
 var PLAYER_HP = 3;
 
+// src/metrics.ts
+var metrics_exports = {};
+__export(metrics_exports, {
+  Renderer: () => Renderer2,
+  charWidth: () => charWidth,
+  init: () => init,
+  tileCount: () => tileCount,
+  tileSize: () => tileSize
+});
+
+// src/renderer/renderer.ts
+var Renderer = class {
+  constructor(tileCount3, tileSize3) {
+    this.tileCount = tileCount3;
+    this.tileSize = tileSize3;
+  }
+  node;
+  static computeTileSize(tileCount3, area, aspectRatioRange) {
+    let w = Math.floor(area[0] / tileCount3[0]);
+    let h = Math.floor(area[1] / tileCount3[1]);
+    let ar = w / h;
+    if (ar < aspectRatioRange[0]) {
+      h = Math.floor(w / aspectRatioRange[0]);
+    } else if (ar > aspectRatioRange[1]) {
+      w = Math.floor(h * aspectRatioRange[1]);
+    }
+    return [w, h];
+  }
+  draw(x, y, drawables) {
+  }
+  remove(drawable) {
+  }
+};
+
+// src/renderer/canvas.ts
+var DPR = devicePixelRatio > 1 ? 2 : 1;
+var Canvas = class extends Renderer {
+  node = document.createElement("canvas");
+  ctx = this.node.getContext("2d");
+  constructor(tileCount3, tileSize3) {
+    super(tileCount3, tileSize3);
+    const width = tileCount3[0] * tileSize3[0];
+    const height = tileCount3[1] * tileSize3[1];
+    const { node: node3, ctx } = this;
+    node3.width = width * DPR;
+    node3.height = height * DPR;
+    node3.style.width = `${width}px`;
+    node3.style.height = `${height}px`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${tileSize3[1]}px input`;
+    ctx.scale(DPR, DPR);
+  }
+  draw(x, y, drawables) {
+    let visuals = drawables.map((d) => d.visual);
+    let visual = resolveVisual(visuals);
+    this.drawVisual(x, y, visual);
+  }
+  drawVisual(x, y, visual) {
+    const { ctx, tileSize: tileSize3 } = this;
+    ctx.fillStyle = visual.bg;
+    ctx.fillRect(x * tileSize3[0], y * tileSize3[1], tileSize3[0], tileSize3[1]);
+    if (visual.ch) {
+      ctx.fillStyle = visual.fg;
+      ctx.fillText(visual.ch, (x + 0.5) * tileSize3[0], (y + 0.5) * tileSize3[1] + 1);
+    }
+  }
+};
+function resolveVisual(visuals) {
+  let visual = {
+    bg: "black",
+    fg: "gray",
+    ch: ""
+  };
+  visuals.forEach((v) => Object.assign(visual, v));
+  return visual;
+}
+
+// src/renderer/dom.ts
+var DOM = class extends Renderer {
+  node = document.createElement("div");
+  nodes = /* @__PURE__ */ new Map();
+  constructor(tileCount3, tileSize3) {
+    super(tileCount3, tileSize3);
+    const { node: node3 } = this;
+    node3.className = "renderer";
+    node3.style.setProperty("--tile-width", `${tileSize3[0]}px`);
+    node3.style.setProperty("--tile-height", `${tileSize3[1]}px`);
+    node3.style.width = `${tileCount3[0] * tileSize3[0]}px`;
+    node3.style.height = `${tileCount3[1] * tileSize3[1]}px`;
+  }
+  draw(x, y, drawables) {
+    const { node: node3, nodes } = this;
+    drawables.forEach((d, i) => {
+      let dnode = nodes.get(d);
+      if (!dnode) {
+        dnode = document.createElement("div");
+        node3.append(dnode);
+        nodes.set(d, dnode);
+      }
+      dnode.style.setProperty("--x", String(x));
+      dnode.style.setProperty("--y", String(y));
+      dnode.style.zIndex = String(i + 1);
+      const { visual } = d;
+      if (visual.bg) {
+        dnode.style.backgroundColor = visual.bg;
+      }
+      if (visual.fg) {
+        dnode.style.color = visual.fg;
+      }
+      if (visual.ch) {
+        dnode.textContent = visual.ch;
+      }
+    });
+  }
+  remove(drawable) {
+    const { nodes } = this;
+    let dnode = nodes.get(drawable);
+    dnode && dnode.remove();
+  }
+};
+
+// src/renderer/combo.ts
+var Combo = class extends Renderer {
+  node = document.createElement("div");
+  renderers;
+  static computeTileSize(tileCount3, area, aspectRatioRange) {
+    let halfArea = [area[0] / 2, area[1]];
+    return super.computeTileSize(tileCount3, halfArea, aspectRatioRange);
+  }
+  constructor(tileCount3, tileSize3) {
+    super(tileCount3, tileSize3);
+    const { node: node3 } = this;
+    node3.className = "combo";
+    let renderers = [Canvas, DOM].map((r) => new r(tileCount3, tileSize3));
+    node3.append(...renderers.map((r) => r.node));
+    this.renderers = renderers;
+  }
+  draw(x, y, drawables) {
+    this.renderers.forEach((r) => r.draw(x, y, drawables));
+  }
+  remove(drawable) {
+    this.renderers.forEach((r) => r.remove(drawable));
+  }
+};
+
+// src/metrics.ts
+var tileCount;
+var tileSize;
+var charWidth;
+var Renderer2 = Combo;
+async function init(tc) {
+  const { style } = document.documentElement;
+  tileCount = tc;
+  document.fonts.forEach((f) => f.load());
+  await document.fonts.ready;
+  tileSize = Renderer2.computeTileSize(tileCount, [window.innerWidth * 0.9, window.innerHeight * 0.9], [0.7, 1]);
+  style.setProperty("--tile-width", `${tileSize[0]}px`);
+  style.setProperty("--tile-height", `${tileSize[1]}px`);
+  style.setProperty("--map-width", String(tileCount[0]));
+  charWidth = measureCharWidth();
+  style.setProperty("--char-width", `${charWidth}px`);
+}
+function measureCharWidth() {
+  let span = document.createElement("span");
+  span.style.fontSize = "var(--tile-height)";
+  span.textContent = "P";
+  document.body.append(span);
+  let rect = span.getBoundingClientRect();
+  span.remove();
+  return rect.width;
+}
+
 // src/log.ts
 var node = document.querySelector("#log");
 var history = [];
-var limit;
 function computeHistoryLength() {
   return history.reduce((acc, h) => acc + h.length, 0);
 }
@@ -63,6 +250,7 @@ async function add(str) {
   span.textContent = str + " ";
   let length = str.length + 1;
   let wouldBeLength = computeHistoryLength() + length;
+  let limit = tileCount[0] * 2 - 15;
   if (wouldBeLength > limit) {
     let more = document.createElement("span");
     let kbd = document.createElement("kbd");
@@ -85,15 +273,6 @@ async function add(str) {
     first.node.remove();
     totalLength -= first.length;
   }
-}
-function init(level2, charWidth) {
-  const { tileSize, map } = level2;
-  limit = map.width * 2 - 15;
-  node.style.setProperty("--tile-width", `${tileSize[0]}px`);
-  node.style.setProperty("--tile-height", `${tileSize[1]}px`);
-  node.style.setProperty("--char-width", `${charWidth}px`);
-  node.style.setProperty("--char-width", `${charWidth}px`);
-  node.style.setProperty("--map-width", String(map.width));
 }
 
 // src/items/db.ts
@@ -153,12 +332,6 @@ var ITEMS = [{
 
 // src/status.ts
 var node2 = document.querySelector("#status");
-function init2(level2, charWidth) {
-  const { tileSize } = level2;
-  node2.style.setProperty("--tile-width", `${tileSize[0]}px`);
-  node2.style.setProperty("--tile-height", `${tileSize[1]}px`);
-  node2.style.setProperty("--char-width", `${charWidth}px`);
-}
 function update(player) {
   let items = ITEMS.map((it) => buildItem(it, player));
   let status = [
@@ -627,10 +800,10 @@ function bgColor(x, y) {
 
 // src/map.ts
 var Map2 = class {
-  constructor(width, height, renderer) {
+  constructor(width, height, renderer2) {
     this.width = width;
     this.height = height;
-    this.renderer = renderer;
+    this.renderer = renderer2;
     this.bg = new Background(width, height);
     for (let i = 0; i < width; i++) {
       for (let j = 0; j < height; j++) {
@@ -729,10 +902,7 @@ var House = class extends Item {
 var Level = class {
   constructor(config) {
     this.config = config;
-    let size = [45, 30];
-    let renderer = config.Renderer.withAreaLimit(size, [window.innerWidth * 0.9, window.innerHeight * 0.9], [0.7, 1]);
-    document.body.prepend(renderer.node);
-    let map = new Map2(size[0], size[1], renderer);
+    let map = new Map2(config.tileCount[0], config.tileCount[1], config.renderer);
     let player = new Player(map);
     player.position = [15, 15];
     map.addBeing(player);
@@ -746,8 +916,6 @@ var Level = class {
     this.map = map;
     this.player = player;
     this.zombies = zombies;
-    this.renderer = renderer;
-    console.log("tileSize", this.tileSize);
   }
   player;
   zombies;
@@ -763,178 +931,12 @@ var Level = class {
   get done() {
     return this.player.hp <= 0;
   }
-  get tileSize() {
-    return this.renderer.tileSize;
-  }
-};
-
-// src/renderer/renderer.ts
-function computeTileSize(tileCount, area, aspectRatioRange) {
-  let w = Math.floor(area[0] / tileCount[0]);
-  let h = Math.floor(area[1] / tileCount[1]);
-  let ar = w / h;
-  if (ar < aspectRatioRange[0]) {
-    h = Math.floor(w / aspectRatioRange[0]);
-  } else if (ar > aspectRatioRange[1]) {
-    w = Math.floor(h * aspectRatioRange[1]);
-  }
-  return [w, h];
-}
-var Renderer = class {
-  constructor(tileCount, tileSize) {
-    this.tileCount = tileCount;
-    this.tileSize = tileSize;
-  }
-  node;
-  static withTileSize(tileCount, tileSize) {
-    return new this(tileCount, tileSize);
-  }
-  static withAreaLimit(tileCount, area, aspectRatioRange) {
-    let tileSize = computeTileSize(tileCount, area, aspectRatioRange);
-    return this.withTileSize(tileCount, tileSize);
-  }
-  draw(x, y, drawables) {
-  }
-  remove(drawable) {
-  }
-};
-
-// src/renderer/canvas.ts
-var DPR = devicePixelRatio > 1 ? 2 : 1;
-var Canvas = class extends Renderer {
-  node = document.createElement("canvas");
-  ctx = this.node.getContext("2d");
-  constructor(tileCount, tileSize) {
-    super(tileCount, tileSize);
-    const width = tileCount[0] * tileSize[0];
-    const height = tileCount[1] * tileSize[1];
-    const { node: node3, ctx } = this;
-    node3.width = width * DPR;
-    node3.height = height * DPR;
-    node3.style.width = `${width}px`;
-    node3.style.height = `${height}px`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = `bold ${tileSize[1]}px input`;
-    ctx.scale(DPR, DPR);
-  }
-  draw(x, y, drawables) {
-    let visuals = drawables.map((d) => d.visual);
-    let visual = resolveVisual(visuals);
-    this.drawVisual(x, y, visual);
-  }
-  drawVisual(x, y, visual) {
-    const { ctx, tileSize } = this;
-    ctx.fillStyle = visual.bg;
-    ctx.fillRect(x * tileSize[0], y * tileSize[1], tileSize[0], tileSize[1]);
-    if (visual.ch) {
-      ctx.fillStyle = visual.fg;
-      ctx.fillText(visual.ch, (x + 0.5) * tileSize[0], (y + 0.5) * tileSize[1] + 1);
-    }
-  }
-};
-function resolveVisual(visuals) {
-  let visual = {
-    bg: "black",
-    fg: "gray",
-    ch: ""
-  };
-  visuals.forEach((v) => Object.assign(visual, v));
-  return visual;
-}
-
-// src/renderer/dom.ts
-var DOM = class extends Renderer {
-  node = document.createElement("div");
-  nodes = /* @__PURE__ */ new Map();
-  constructor(tileCount, tileSize) {
-    super(tileCount, tileSize);
-    const { node: node3 } = this;
-    node3.className = "renderer";
-    node3.style.setProperty("--tile-width", `${tileSize[0]}px`);
-    node3.style.setProperty("--tile-height", `${tileSize[1]}px`);
-    node3.style.width = `${tileCount[0] * tileSize[0]}px`;
-    node3.style.height = `${tileCount[1] * tileSize[1]}px`;
-  }
-  draw(x, y, drawables) {
-    const { node: node3, nodes } = this;
-    drawables.forEach((d, i) => {
-      let dnode = nodes.get(d);
-      if (!dnode) {
-        dnode = document.createElement("div");
-        node3.append(dnode);
-        nodes.set(d, dnode);
-      }
-      dnode.style.setProperty("--x", String(x));
-      dnode.style.setProperty("--y", String(y));
-      dnode.style.zIndex = String(i + 1);
-      const { visual } = d;
-      if (visual.bg) {
-        dnode.style.backgroundColor = visual.bg;
-      }
-      if (visual.fg) {
-        dnode.style.color = visual.fg;
-      }
-      if (visual.ch) {
-        dnode.textContent = visual.ch;
-      }
-    });
-  }
-  remove(drawable) {
-    const { nodes } = this;
-    let dnode = nodes.get(drawable);
-    dnode && dnode.remove();
-  }
-};
-
-// src/renderer/combo.ts
-var Combo = class _Combo extends Renderer {
-  node = document.createElement("div");
-  renderers;
-  static withAreaLimit(tileCount, area, aspectRatioRange) {
-    let halfArea = [area[0] / 2, area[1]];
-    let tileSize = computeTileSize(tileCount, halfArea, aspectRatioRange);
-    return new _Combo(tileCount, tileSize);
-  }
-  constructor(tileCount, tileSize) {
-    super(tileCount, tileSize);
-    const { node: node3 } = this;
-    node3.className = "combo";
-    let renderers = [Canvas, DOM].map((r) => new r(tileCount, tileSize));
-    node3.append(...renderers.map((r) => r.node));
-    this.renderers = renderers;
-  }
-  draw(x, y, drawables) {
-    this.renderers.forEach((r) => r.draw(x, y, drawables));
-  }
-  remove(drawable) {
-    this.renderers.forEach((r) => r.remove(drawable));
-  }
-};
-
-// src/random.ts
-Array.prototype.random = function() {
-  const { length } = this;
-  if (!length) {
-    return null;
-  }
-  return this[Math.floor(Math.random() * length)];
 };
 
 // src/index.ts
-document.fonts.forEach((f) => f.load());
-await document.fonts.ready;
-var level = new Level({ Renderer: Combo });
-function measureCharWidth(tileSize) {
-  let span = document.createElement("span");
-  span.style.fontSize = `${tileSize[1]}px`;
-  span.textContent = "P";
-  document.body.append(span);
-  let rect = span.getBoundingClientRect();
-  span.remove();
-  return rect.width;
-}
-var chw = measureCharWidth(level.tileSize);
-init2(level, chw);
-init(level, chw);
+await init([45, 30]);
+var { tileCount: tileCount2, tileSize: tileSize2 } = metrics_exports;
+var renderer = new Renderer2(tileCount2, tileSize2);
+document.body.prepend(renderer.node);
+var level = new Level({ renderer, tileCount: tileCount2 });
 level.play();
