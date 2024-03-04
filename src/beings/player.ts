@@ -1,3 +1,4 @@
+import Entity from "../entity.js";
 import Being from "./being.js";
 import Map from "../map.js";
 import { ITEMS } from "../items/db.js";
@@ -5,14 +6,15 @@ import * as keyboard from "../keyboard.js";
 import * as rules from "../rules.js";
 import * as log from "../log.js";
 import * as status from "../status.js";
-import { help, buy } from "../dialog.js";
+import help from "../dialogs/help.js";
+import buy from "../dialogs/buy.js";
 
 
 export default class Player extends Being {
-	visual = {ch:"@", fg:"red"};
-	_hp = rules.PLAYER_HP;
-	_money = 10;
-	items = new window.Map<string, number>();
+	readonly visual = {ch:"@", fg:"red"};
+	protected _hp = rules.PLAYER_HP;
+	protected _money = 10;
+	readonly items = new window.Map<string, number>();
 
 	constructor(protected map: Map) {
 		super(map);
@@ -20,7 +22,12 @@ export default class Player extends Being {
 
 		this._hp--;
 		this.setItem("crowbar", Infinity);
-		this.setItem("rake", 5);
+		this.setItem("rake", Infinity);
+		this.setItem("barricade", 3);
+		this.setItem("mine", Infinity);
+		this.setItem("bazooka", Infinity);
+		this.setItem("wire", Infinity);
+		this.setItem("fence", Infinity);
 	}
 
 	get hp() { return this._hp; }
@@ -91,16 +98,18 @@ export default class Player extends Being {
 		let being = map.getBeing(x, y);
 		let item = map.getItem(x, y);
 
-		if (being) { // FIXME debug
-			being.damage(this);
-			return true;
+		if (being) {
+			await log.add(`${being.name.article().capitalize()} blocks the way.`);
+			return false;
 		}
 
-		if (being) { return false; } // FIXME neco napsat
 		if (item && item.blocks) {
-			let it = ITEMS.find(it => item instanceof it.ctor)!;
-			await log.add(`${it.name} blocks the way.`);
+			await log.add(`${item.name.article().capitalize()} blocks the way.`);
 			return false;
+		}
+
+		if (item && !item.blocks) {
+			await log.add(`You carefully sidestep ${item.name.article()}.`);
 		}
 
 		this.position = [x, y];
@@ -113,35 +122,32 @@ export default class Player extends Being {
 
 		let amount = this.getItem(it.id);
 		if (!amount) {
-			await log.add(`You don't have any ${it.name}s.`);
+			await log.add(`You don't have any ${it.ctor.name}s.`);
 			return false;
 		}
 
-		let article = (it.name.match(/^[aeiou]/i) ? "an" : "a");
-		let direction = await waitForDirection(`Use ${article} ${it.name}`);
+		let name = it.ctor.name;
+
+		let direction = await waitForDirection(`Use ${name.article()}`);
 		if (!direction) { return false; }
 
 		const { map, position } = this;
 
 		log.clear();
+		this.setItem(it.id, amount-1);
 		let item = new it.ctor(map);
-		await item.use(position, direction);
-		return true;
+		return item.use(position, direction);
 	}
 
-	damage(source: Being) {
-		const { map, position } = this;
-		this._hp -= 1;
+	async damage(source: Entity) {
+		await log.add(`${source.name.article().capitalize()} hits you!`);
+		super.damage(source);
 		status.update(this);
+	}
 
-		if (this.hp == 0) {
-			map.removeBeing(this);
-			let corpse = this.toCorpse();
-			map.setBackground(position[0], position[1], corpse);
-			console.log("Player killed by", source, "HP:", this.hp);
-		} else {
-			console.log("Player damaged by", source, "HP:", this.hp);
-		}
+	async die(source: Entity) {
+		super.die(source);
+		await log.add("You die...");
 	}
 }
 
@@ -179,4 +185,3 @@ const MOVEMENT = {
 
 	"Numpad3": [1, 1]
 }
-

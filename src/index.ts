@@ -1,13 +1,13 @@
-import "./random.js";
+import "./prototype.js";
 import Level from "./level.js";
 import * as metrics from "./metrics.js";
 
 
 await metrics.init([45, 30]);
 
-const { tileCount, tileSize } = metrics;
-let renderer = new metrics.Renderer(tileCount, tileSize)
-document.body.prepend(renderer.node);
+let renderer = new metrics.Renderer();
+document.querySelector("main").prepend(renderer.node);
 
+const { tileCount } = metrics;
 let level = new Level({renderer, tileCount});
 level.play();

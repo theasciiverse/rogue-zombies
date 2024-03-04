@@ -4,7 +4,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// src/random.ts
+// src/prototype.ts
 Array.prototype.random = function() {
   const { length } = this;
   if (!length) {
@@ -12,55 +12,49 @@ Array.prototype.random = function() {
   }
   return this[Math.floor(Math.random() * length)];
 };
+String.prototype.capitalize = function() {
+  const { length } = this;
+  if (!length) {
+    return this;
+  }
+  return this.substring(0, 1).toUpperCase() + this.substring(1);
+};
+String.prototype.article = function() {
+  let a = this.match(/^[aeiou]/i) ? "an" : "a";
+  return `${a} ${this}`;
+};
 
-// src/beings/being.ts
-var Being = class {
+// src/entity.ts
+var Entity = class {
   constructor(map) {
     this.map = map;
   }
   _position;
-  visual = { ch: "?", fg: "lime" };
+  _hp = 1;
   get name() {
-    return "?";
+    return "";
   }
   get position() {
     return this._position;
   }
   set position(position) {
-    const { map } = this;
     this._position = position;
-    map.changed(this);
+    this.map.changed(this);
   }
-  damage(source) {
-    console.log("being", this, "damaged by", source);
-  }
-  toCorpse() {
-    return { ch: "%", fg: this.visual.fg };
+  async damage(source) {
+    this._hp -= 1;
+    if (this._hp == 0) {
+      this.die(source);
+    }
   }
 };
 
-// src/items/item.ts
-var Item = class {
-  constructor(map) {
-    this.map = map;
-  }
-  _position;
-  visual = { ch: "?", fg: "white" };
-  blocks = false;
-  get position() {
-    return this._position;
-  }
-  set position(position) {
-    const { map } = this;
-    this._position = position;
-    map.changed(this);
-  }
-  async use(position, direction) {
-  }
-  activate(being) {
-  }
-  damage(source) {
-    console.log("item", this, "damaged by", source);
+// src/beings/being.ts
+var Being = class extends Entity {
+  die(source) {
+    const { map, position, visual } = this;
+    map.removeBeing(this);
+    map.setBackground(position[0], position[1], { ch: "%", fg: visual.fg });
   }
 };
 
@@ -102,10 +96,6 @@ __export(metrics_exports, {
 
 // src/renderer/renderer.ts
 var Renderer = class {
-  constructor(tileCount3, tileSize3) {
-    this.tileCount = tileCount3;
-    this.tileSize = tileSize3;
-  }
   node;
   static computeTileSize(tileCount3, area, aspectRatioRange) {
     let w = Math.floor(area[0] / tileCount3[0]);
@@ -118,10 +108,6 @@ var Renderer = class {
     }
     return [w, h];
   }
-  draw(x, y, drawables) {
-  }
-  remove(drawable) {
-  }
 };
 
 // src/renderer/canvas.ts
@@ -129,19 +115,17 @@ var DPR = devicePixelRatio > 1 ? 2 : 1;
 var Canvas = class extends Renderer {
   node = document.createElement("canvas");
   ctx = this.node.getContext("2d");
-  constructor(tileCount3, tileSize3) {
-    super(tileCount3, tileSize3);
-    const width = tileCount3[0] * tileSize3[0];
-    const height = tileCount3[1] * tileSize3[1];
+  tileSize;
+  configure(tileCount3, tileSize2) {
     const { node: node3, ctx } = this;
-    node3.width = width * DPR;
-    node3.height = height * DPR;
-    node3.style.width = `${width}px`;
-    node3.style.height = `${height}px`;
+    node3.width = tileCount3[0] * tileSize2[0] * DPR;
+    node3.height = tileCount3[1] * tileSize2[1] * DPR;
+    ctx.restore();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = `bold ${tileSize3[1]}px input`;
+    ctx.font = `bold ${tileSize2[1]}px input`;
     ctx.scale(DPR, DPR);
+    this.tileSize = tileSize2;
   }
   draw(x, y, drawables) {
     let visuals = drawables.map((d) => d.visual);
@@ -149,13 +133,15 @@ var Canvas = class extends Renderer {
     this.drawVisual(x, y, visual);
   }
   drawVisual(x, y, visual) {
-    const { ctx, tileSize: tileSize3 } = this;
+    const { ctx, tileSize: tileSize2 } = this;
     ctx.fillStyle = visual.bg;
-    ctx.fillRect(x * tileSize3[0], y * tileSize3[1], tileSize3[0], tileSize3[1]);
+    ctx.fillRect(x * tileSize2[0], y * tileSize2[1], tileSize2[0], tileSize2[1]);
     if (visual.ch) {
       ctx.fillStyle = visual.fg;
-      ctx.fillText(visual.ch, (x + 0.5) * tileSize3[0], (y + 0.5) * tileSize3[1] + 1);
+      ctx.fillText(visual.ch, (x + 0.5) * tileSize2[0], (y + 0.5) * tileSize2[1] + 1);
     }
+  }
+  remove() {
   }
 };
 function resolveVisual(visuals) {
@@ -172,14 +158,11 @@ function resolveVisual(visuals) {
 var DOM = class extends Renderer {
   node = document.createElement("div");
   nodes = /* @__PURE__ */ new Map();
-  constructor(tileCount3, tileSize3) {
-    super(tileCount3, tileSize3);
-    const { node: node3 } = this;
-    node3.className = "renderer";
-    node3.style.setProperty("--tile-width", `${tileSize3[0]}px`);
-    node3.style.setProperty("--tile-height", `${tileSize3[1]}px`);
-    node3.style.width = `${tileCount3[0] * tileSize3[0]}px`;
-    node3.style.height = `${tileCount3[1] * tileSize3[1]}px`;
+  constructor() {
+    super();
+    this.node.className = "renderer";
+  }
+  configure() {
   }
   draw(x, y, drawables) {
     const { node: node3, nodes } = this;
@@ -220,11 +203,11 @@ var Combo = class extends Renderer {
     let halfArea = [area[0] / 2, area[1]];
     return super.computeTileSize(tileCount3, halfArea, aspectRatioRange);
   }
-  constructor(tileCount3, tileSize3) {
-    super(tileCount3, tileSize3);
+  constructor() {
+    super();
     const { node: node3 } = this;
     node3.className = "combo";
-    let renderers = [Canvas, DOM].map((r) => new r(tileCount3, tileSize3));
+    let renderers = [Canvas, DOM].map((r) => new r());
     node3.append(...renderers.map((r) => r.node));
     this.renderers = renderers;
   }
@@ -234,6 +217,9 @@ var Combo = class extends Renderer {
   remove(drawable) {
     this.renderers.forEach((r) => r.remove(drawable));
   }
+  configure(tileCount3, tileSize2) {
+    this.renderers.forEach((r) => r.configure(tileCount3, tileSize2));
+  }
 };
 
 // src/metrics.ts
@@ -241,17 +227,35 @@ var tileCount;
 var tileSize;
 var charWidth;
 var Renderer2 = Combo;
-async function init(tc) {
-  const { style } = document.documentElement;
-  tileCount = tc;
-  document.fonts.forEach((f) => f.load());
-  await document.fonts.ready;
-  tileSize = Renderer2.computeTileSize(tileCount, [window.innerWidth * 0.9, window.innerHeight * 0.9], [0.7, 1]);
+var { style } = document.documentElement;
+var resizeTimeout;
+function onResized() {
+  measure();
+  window.dispatchEvent(new CustomEvent("metrics-change"));
+}
+function onResize() {
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout);
+  }
+  resizeTimeout = setTimeout(onResized, 100);
+}
+function measure() {
+  let realTileCount = [tileCount[0], tileCount[1] + 5];
+  tileSize = Renderer2.computeTileSize(realTileCount, [window.innerWidth, window.innerHeight], [0.7, 1]);
+  console.log(tileSize);
   style.setProperty("--tile-width", `${tileSize[0]}px`);
   style.setProperty("--tile-height", `${tileSize[1]}px`);
-  style.setProperty("--map-width", String(tileCount[0]));
   charWidth = measureCharWidth();
   style.setProperty("--char-width", `${charWidth}px`);
+}
+async function init(tc) {
+  tileCount = tc;
+  style.setProperty("--map-width", String(tileCount[0]));
+  style.setProperty("--map-height", String(tileCount[1]));
+  document.fonts.forEach((f) => f.load());
+  await document.fonts.ready;
+  measure();
+  window.addEventListener("resize", onResize);
 }
 function measureCharWidth() {
   let span = document.createElement("span");
@@ -303,8 +307,327 @@ function clear() {
   history = [];
 }
 
+// src/items/item.ts
+var Item = class extends Entity {
+  static name = "";
+  static description = "";
+  blocks = false;
+  get name() {
+    return this.constructor.name;
+  }
+  async activate(being) {
+  }
+  // stepped on something
+  die(source) {
+    this.map.removeItem(this);
+  }
+  async use(position, direction) {
+    const { map } = this;
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    let being = map.getBeing(tx, ty);
+    let item = map.getItem(tx, ty);
+    if (being) {
+      await add(`Cannot use ${this.name}: there is a ${being.name} standing there!`);
+      return false;
+    } else if (item) {
+      await add(`Cannot use ${this.name}: ${item.name.article()} is ${item.blocks ? "standing" : "lying"} there!`);
+      return false;
+    } else {
+      return true;
+    }
+  }
+};
+
 // src/items/crowbar.ts
 var Crowbar = class extends Item {
+  visual = {};
+  static name = "Crowbar";
+  static description = "Melee range, unlimited uses. You already have this.";
+  async use(position, direction) {
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    let being = this.map.getBeing(tx, ty);
+    let item = this.map.getItem(tx, ty);
+    if (being) {
+      await add(`You hit the ${being.name}.`);
+      being.damage(this);
+    } else if (item) {
+      await add(`You hit the ${item.name}.`);
+      item.damage(this);
+    } else {
+      await add("You swing the crowbar in the empty space.");
+    }
+    return true;
+  }
+};
+
+// src/items/barricade.ts
+var COLORS = ["", "#300", "#850", "#c90"];
+var Barricade = class extends Item {
+  static name = "Wooden Barricade";
+  static description = "Can hold them for some time.";
+  blocks = true;
+  visual = { ch: "#", fg: "" };
+  _hp = COLORS.length - 1;
+  async damage(source) {
+    await super.damage(source);
+    if (this._hp > 0) {
+      this.visual.fg = COLORS[this._hp];
+      this.map.changed(this);
+    }
+  }
+  async use(position, direction) {
+    let ok = await super.use(position, direction);
+    if (!ok) {
+      return false;
+    }
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    this._position = [tx, ty];
+    this.map.addItem(this);
+    await add("You build a barricade.");
+    return true;
+  }
+};
+
+// src/items/rake.ts
+var Rake = class extends Item {
+  static name = "Rake";
+  static description = "Kills one zombie dumb enough to step on it.";
+  visual = { ch: "]", fg: "#999" };
+  async use(position, direction) {
+    let ok = await super.use(position, direction);
+    if (!ok) {
+      return false;
+    }
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    this._position = [tx, ty];
+    this.map.addItem(this);
+    await add("You set up a rake.");
+    return true;
+  }
+  async activate(being) {
+    this.map.removeItem(this);
+    await being.damage(this);
+  }
+};
+
+// src/beings/zombie.ts
+var CHARS = ["z", "Z"];
+var COLORS2 = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
+var Zombie = class extends Being {
+  constructor(map, zombies) {
+    super(map);
+    this.zombies = zombies;
+  }
+  visual = { ch: CHARS.random(), fg: COLORS2.random() };
+  get name() {
+    return this.visual.ch == "z" ? "zombie" : "large zombie";
+  }
+  async play(player) {
+    const { position } = this;
+    let results = DIRS.map((dir) => {
+      let x = position[0] + dir[0];
+      let y = position[1] + dir[1];
+      return this.getMovementResult(x, y, player);
+    });
+    let best = pickBestMovementResult(results);
+    if (!best) {
+      return;
+    }
+    switch (best.type) {
+      case "player":
+        await player.damage(this);
+        break;
+      case "item":
+        best.item.damage(this);
+        break;
+      case "move":
+        this.position = best.position;
+        if (best.item) {
+          await best.item.activate(this);
+        }
+        break;
+    }
+  }
+  die(source) {
+    super.die(source);
+    this.zombies.remove(this);
+  }
+  getMovementResult(x, y, player) {
+    const { map, position } = this;
+    if (!map.isPositionValid(x, y)) {
+      return { type: "invalid" };
+    }
+    let being = map.getBeing(x, y);
+    if (being) {
+      let type = being == player ? "player" : "invalid";
+      return { type };
+    }
+    let currentDistance = distance(position, player.position);
+    let dist = distance([x, y], player.position);
+    if (dist > currentDistance) {
+      return { type: "invalid" };
+    }
+    let item = map.getItem(x, y);
+    if (item && item.blocks) {
+      return { type: "item", dist, item };
+    } else {
+      return { type: "move", dist, position: [x, y], item };
+    }
+  }
+};
+function pickBestMovementResult(results) {
+  let valid = results.filter((r) => r.type != "invalid");
+  if (!valid.length) {
+    return null;
+  }
+  let player = valid.find((r) => r.type == "player");
+  if (player) {
+    return player;
+  }
+  let moves = valid.filter((r) => r.type == "move");
+  if (moves.length > 0) {
+    return pickBestDistanceResult(moves);
+  }
+  let items = valid.filter((r) => r.type == "item");
+  return pickBestDistanceResult(items);
+}
+function pickBestDistanceResult(results) {
+  let distances = results.map((r) => r.dist);
+  let best = Math.min(...distances);
+  return results.filter((r) => r.dist == best).random();
+}
+function distance(pos1, pos2) {
+  var dx = Math.abs(pos1[0] - pos2[0]);
+  var dy = Math.abs(pos1[1] - pos2[1]);
+  return Math.max(dx, dy);
+}
+var DIRS = [
+  [0, -1],
+  [1, -1],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [-1, 1],
+  [-1, 0],
+  [-1, -1]
+];
+
+// src/explosion.ts
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+function gatherPositions(map, center, r) {
+  let positions = [];
+  for (let i = center[0] - r; i <= center[0] + r; i++) {
+    for (let j = center[1] - r; j <= center[1] + r; j++) {
+      if (!map.isPositionValid(i, j)) {
+        continue;
+      }
+      positions.push([i, j]);
+    }
+  }
+  return positions;
+}
+function extractZombies(positions, map) {
+  let zombies = [];
+  positions.forEach((pos) => {
+    let being = map.getBeing(pos[0], pos[1]);
+    if (being instanceof Zombie) {
+      zombies.push(being);
+    }
+  });
+  return zombies;
+}
+function drawExplosions(map, positions, fraction) {
+  console.log("draw step", fraction);
+  let amount = Math.round(3 * 255 * (1 - fraction));
+  let r = Math.max(0, Math.min(amount - 0 * 255, 255));
+  let g = Math.max(0, Math.min(amount - 1 * 255, 255));
+  let b = Math.max(0, Math.min(amount - 2 * 255, 255));
+  let fg = `rgb(${r} ${g} ${b})`;
+  let visual = { ch: "*", fg };
+  positions.forEach((pos) => map.setFX(pos[0], pos[1], visual));
+}
+async function explode(map, position, radius, source) {
+  let positions = gatherPositions(map, position, radius);
+  let zombies = extractZombies(positions, map);
+  let promises = zombies.map((z) => z.damage(source));
+  let duration = 400;
+  let step = 30;
+  for (let i = 0; i < duration; i += step) {
+    drawExplosions(map, positions, i / duration);
+    await sleep(step);
+  }
+  positions.forEach((pos) => map.setFX(pos[0], pos[1], null));
+  await Promise.all(promises);
+}
+
+// src/items/mine.ts
+var Mine = class extends Item {
+  static name = "Mine";
+  static description = "Explodes when stepped on by a zombie.";
+  visual = { ch: "*", fg: "gray" };
+  async use(position, direction) {
+    let ok = await super.use(position, direction);
+    if (!ok) {
+      return false;
+    }
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    this._position = [tx, ty];
+    this.map.addItem(this);
+    await add("You set up a mine.");
+    return true;
+  }
+  async activate(being) {
+    const { map, position } = this;
+    map.removeItem(this);
+    await explode(map, position, 3, this);
+  }
+};
+
+// src/items/bazooka.ts
+var Bazooka = class extends Item {
+  static name = "Bazooka";
+  static description = "Flys in a straight line, explodes on impact.";
+  async use(position, direction) {
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    let being = this.map.getBeing(tx, ty);
+    if (being) {
+      await add(`You hit the ${being.name}.`);
+      being.damage(this);
+    } else {
+      await add("You swing the crowbar in the empty space.");
+    }
+  }
+};
+
+// src/items/wire.ts
+var Wire = class extends Item {
+  static name = "Barbed wire";
+  static description = "Auto-connects to nearby wires. Has little health.";
+  async use(position, direction) {
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    let being = this.map.getBeing(tx, ty);
+    if (being) {
+      await add(`You hit the ${being.name}.`);
+      being.damage(this);
+    } else {
+      await add("You swing the crowbar in the empty space.");
+    }
+  }
+};
+
+// src/items/fence.ts
+var Fence = class extends Item {
+  static name = "Electric fence";
+  static description = "Auto-connects to nearby fences. Has more health.";
   async use(position, direction) {
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
@@ -321,57 +644,49 @@ var Crowbar = class extends Item {
 // src/items/db.ts
 var ITEMS = [{
   id: "crowbar",
-  name: "Crowbar",
   key: "1",
   price: 0,
   amount: 0,
-  description: "Melee range, unlimited uses. You already have this.",
   ctor: Crowbar
 }, {
   id: "barricade",
-  name: "Wooden barricade",
   short: "Barricade",
   key: "2",
   price: 1,
   amount: 3,
-  description: "Can hold them for some time."
+  ctor: Barricade
 }, {
   id: "rake",
-  name: "Rake",
   key: "3",
   price: 1,
   amount: 3,
-  description: "Kills one zombie dumb enough to step on it."
+  ctor: Rake
 }, {
   id: "mine",
-  name: "Mine",
   key: "4",
   price: 3,
   amount: 1,
-  description: "Explodes when stepped on by a zombie."
+  ctor: Mine
 }, {
   id: "bazooka",
-  name: "Bazooka",
   key: "5",
   price: 5,
   amount: 1,
-  description: "Flys in a straight line, explodes on impact."
+  ctor: Bazooka
 }, {
   id: "wire",
-  name: "Barbed wire",
   short: "Wire",
   key: "6",
   price: 3,
   amount: 2,
-  description: "Auto-connects to nearby wires. Has little health."
+  ctor: Wire
 }, {
   id: "fence",
-  name: "Electric fence",
   short: "Fence",
   key: "7",
   price: 3,
   amount: 2,
-  description: "Auto-connects to nearby fences. Has more health."
+  ctor: Fence
 }];
 
 // src/rules.ts
@@ -430,11 +745,11 @@ function buildItem(it, player) {
   let c = document.createElement("span");
   c.className = "count";
   c.textContent = count == Infinity ? "\u221E" : String(count);
-  node3.append(kbd, it.short || it.name, c, "  ");
+  node3.append(kbd, it.short || it.ctor.name, c, "  ");
   return node3;
 }
 
-// src/dialog.ts
+// src/dialogs/dialog.ts
 var Dialog = class {
   dialog = document.createElement("dialog");
   resolve;
@@ -475,6 +790,8 @@ var Dialog = class {
     return key ? key.id : null;
   }
 };
+
+// src/dialogs/help.ts
 async function help() {
   while (true) {
     let html = "Help!";
@@ -489,6 +806,8 @@ async function help() {
     }
   }
 }
+
+// src/dialogs/buy.ts
 async function buy(player) {
   while (true) {
     let dialog = new Dialog("Buy items");
@@ -523,7 +842,7 @@ function buildItemRow(item, player, dialog) {
   let kbd = document.createElement("kbd");
   kbd.textContent = item.key;
   row.insertCell().append(kbd);
-  row.insertCell().textContent = item.name;
+  row.insertCell().textContent = item?.ctor?.name;
   if (item.price > 0) {
     let price = document.createElement("span");
     price.className = "price";
@@ -532,7 +851,7 @@ function buildItemRow(item, player, dialog) {
   } else {
     row.insertCell().textContent = "-free-";
   }
-  row.insertCell().textContent = item.description;
+  row.insertCell().textContent = item?.ctor?.description;
   if (!disabled) {
     dialog.addKey({ id: item.id, code: `Numpad${item.key}` });
     dialog.addKey({ id: item.id, code: `Digit${item.key}` });
@@ -559,7 +878,12 @@ var Player = class extends Being {
     update(this);
     this._hp--;
     this.setItem("crowbar", Infinity);
-    this.setItem("rake", 5);
+    this.setItem("rake", Infinity);
+    this.setItem("barricade", 3);
+    this.setItem("mine", Infinity);
+    this.setItem("bazooka", Infinity);
+    this.setItem("wire", Infinity);
+    this.setItem("fence", Infinity);
   }
   visual = { ch: "@", fg: "red" };
   _hp = PLAYER_HP;
@@ -626,16 +950,15 @@ var Player = class extends Being {
     let being = map.getBeing(x, y);
     let item = map.getItem(x, y);
     if (being) {
-      being.damage(this);
-      return true;
-    }
-    if (being) {
+      await add(`${being.name.article().capitalize()} blocks the way.`);
       return false;
     }
     if (item && item.blocks) {
-      let it = ITEMS.find((it2) => item instanceof it2.ctor);
-      await add(`${it.name} blocks the way.`);
+      await add(`${item.name.article().capitalize()} blocks the way.`);
       return false;
+    }
+    if (item && !item.blocks) {
+      await add(`You carefully sidestep ${item.name.article()}.`);
     }
     this.position = [x, y];
     return true;
@@ -647,32 +970,28 @@ var Player = class extends Being {
     }
     let amount = this.getItem(it.id);
     if (!amount) {
-      await add(`You don't have any ${it.name}s.`);
+      await add(`You don't have any ${it.ctor.name}s.`);
       return false;
     }
-    let article = it.name.match(/^[aeiou]/i) ? "an" : "a";
-    let direction = await waitForDirection(`Use ${article} ${it.name}`);
+    let name = it.ctor.name;
+    let direction = await waitForDirection(`Use ${name.article()}`);
     if (!direction) {
       return false;
     }
     const { map, position } = this;
     clear();
+    this.setItem(it.id, amount - 1);
     let item = new it.ctor(map);
-    await item.use(position, direction);
-    return true;
+    return item.use(position, direction);
   }
-  damage(source) {
-    const { map, position } = this;
-    this._hp -= 1;
+  async damage(source) {
+    await add(`${source.name.article().capitalize()} hits you!`);
+    super.damage(source);
     update(this);
-    if (this.hp == 0) {
-      map.removeBeing(this);
-      let corpse = this.toCorpse();
-      map.setBackground(position[0], position[1], corpse);
-      console.log("Player killed by", source, "HP:", this.hp);
-    } else {
-      console.log("Player damaged by", source, "HP:", this.hp);
-    }
+  }
+  async die(source) {
+    super.die(source);
+    await add("You die...");
   }
 };
 async function waitForDirection(prefix) {
@@ -702,104 +1021,6 @@ var MOVEMENT = {
   "Numpad3": [1, 1]
 };
 
-// src/beings/zombie.ts
-var CHARS = ["z", "Z"];
-var COLORS = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
-var Zombie = class extends Being {
-  constructor(map, zombies) {
-    super(map);
-    this.zombies = zombies;
-  }
-  visual = { ch: CHARS.random(), fg: COLORS.random() };
-  get name() {
-    return this.visual.ch == "z" ? "zombie" : "large zombie";
-  }
-  play(player) {
-    const { position } = this;
-    let results = DIRS.map((dir) => {
-      let x = position[0] + dir[0];
-      let y = position[1] + dir[1];
-      return this.getMovementResult(x, y, player);
-    });
-    let best = pickBestMovementResult(results);
-    if (!best) {
-      return;
-    }
-    switch (best.type) {
-      case "player":
-        player.damage(this);
-        break;
-      case "move":
-        this.position = best.position;
-        break;
-      case "item":
-        best.item.damage(this);
-        break;
-    }
-  }
-  damage(source) {
-    this.zombies.kill(this, source);
-  }
-  getMovementResult(x, y, player) {
-    const { map, position } = this;
-    if (!map.isPositionValid(x, y)) {
-      return { type: "invalid" };
-    }
-    let being = map.getBeing(x, y);
-    if (being) {
-      let type = being == player ? "player" : "invalid";
-      return { type };
-    }
-    let currentDistance = distance(position, player.position);
-    let dist = distance([x, y], player.position);
-    if (dist > currentDistance) {
-      return { type: "invalid" };
-    }
-    let item = map.getItem(x, y);
-    if (item && item.blocks) {
-      return { type: "item", dist, item };
-    } else {
-      return { type: "move", dist, position: [x, y] };
-    }
-  }
-};
-function pickBestMovementResult(results) {
-  let valid = results.filter((r) => r.type != "invalid");
-  if (!valid.length) {
-    return null;
-  }
-  let player = valid.find((r) => r.type == "player");
-  if (player) {
-    return player;
-  }
-  let moves = valid.filter((r) => r.type == "move");
-  if (moves.length > 0) {
-    return pickBestDistanceResult(moves);
-  }
-  let items = valid.filter((r) => r.type == "item");
-  return pickBestDistanceResult(items);
-}
-function pickBestDistanceResult(results) {
-  let distances = results.map((r) => r.dist);
-  let best = Math.min(...distances);
-  return results.filter((r) => r.dist == best).random();
-}
-function distance(pos1, pos2) {
-  var dx = Math.abs(pos1[0] - pos2[0]);
-  var dy = Math.abs(pos1[1] - pos2[1]);
-  return Math.max(dx, dy);
-}
-var DIRS = [
-  [0, -1],
-  [1, -1],
-  [1, 0],
-  [1, 1],
-  [0, 1],
-  [-1, 1],
-  [-1, 0],
-  [-1, -1]
-];
-
 // src/zombies.ts
 var Zombies = class {
   constructor(map, player) {
@@ -809,11 +1030,13 @@ var Zombies = class {
   zombies = [];
   rounds = 0;
   spawnPotential = 1;
-  play() {
+  async play() {
     const { zombies, player } = this;
     this.rounds++;
     let activeZombies = zombies.filter((_) => Math.random() > ZOMBIE_MOVE_CHANCE);
-    activeZombies.forEach((z) => z.play(player));
+    for (let i = 0; i < activeZombies.length; i++) {
+      await activeZombies[i].play(player);
+    }
     let spawnPotential = this.updateSpawnPotential();
     if (spawnPotential >= 1) {
       let amount = Math.floor(this.spawnPotential);
@@ -821,13 +1044,9 @@ var Zombies = class {
       this.spawn(amount);
     }
   }
-  kill(zombie, source) {
-    const { map } = this;
-    console.log("zombie", zombie, "killed by", source);
+  remove(zombie) {
+    this.player.money++;
     this.zombies = this.zombies.filter((z) => z != zombie);
-    map.removeBeing(zombie);
-    let corpse = zombie.toCorpse();
-    map.setBackground(zombie.position[0], zombie.position[1], corpse);
   }
   spawn(amount) {
     const { zombies, map } = this;
@@ -896,16 +1115,22 @@ var Map2 = class {
     this.height = height;
     this.renderer = renderer2;
     this.bg = new Background(width, height);
-    for (let i = 0; i < width; i++) {
-      for (let j = 0; j < height; j++) {
-        this.redraw([i, j]);
-      }
-    }
+    window.addEventListener("metrics-change", () => this.onMetricsChange());
+    this.onMetricsChange();
   }
   beings = [];
   items = [];
   bg;
+  fx = new window.Map();
   oldPositions = new window.Map();
+  onMetricsChange() {
+    this.renderer.configure(tileCount, tileSize);
+    for (let i = 0; i < this.width; i++) {
+      for (let j = 0; j < this.height; j++) {
+        this.redraw([i, j]);
+      }
+    }
+  }
   isPositionValid(x, y) {
     const { width, height } = this;
     if (x < 0 || x >= width || y < 0 || y >= height) {
@@ -941,6 +1166,22 @@ var Map2 = class {
     this.bg.set(x, y, visual);
     this.redraw([x, y]);
   }
+  setFX(x, y, visual) {
+    const { fx } = this;
+    let key = `${x},${y}`;
+    let existing = fx.get(key);
+    if (visual) {
+      if (existing) {
+        existing.visual = visual;
+      } else {
+        fx.set(key, { position: [x, y], visual });
+      }
+    } else {
+      fx.delete(key);
+      existing && this.renderer.remove(existing);
+    }
+    this.redraw([x, y]);
+  }
   changed(what) {
     const { oldPositions } = this;
     let op = oldPositions.get(what);
@@ -956,13 +1197,15 @@ var Map2 = class {
     this.renderer.draw(x, y, drawables);
   }
   getDrawables(x, y) {
-    const { bg } = this;
+    const { bg, fx } = this;
     let drawables = [];
     drawables.push(bg.at(x, y));
     let item = this.getItem(x, y);
     item && drawables.push(item);
     let being = this.getBeing(x, y);
     being && drawables.push(being);
+    let fxd = fx.get(`${x},${y}`);
+    fxd && drawables.push(fxd);
     return drawables;
   }
 };
@@ -971,6 +1214,7 @@ var Map2 = class {
 var House = class extends Item {
   visual = { ch: "#", fg: "saddlebrown", bg: "black" };
   blocks = true;
+  _hp = 3;
   constructor(map, x, y) {
     super(map);
     this._position = [x, y];
@@ -1014,8 +1258,8 @@ var Level = class {
 
 // src/index.ts
 await init([45, 30]);
-var { tileCount: tileCount2, tileSize: tileSize2 } = metrics_exports;
-var renderer = new Renderer2(tileCount2, tileSize2);
-document.body.prepend(renderer.node);
+var renderer = new Renderer2();
+document.querySelector("main").prepend(renderer.node);
+var { tileCount: tileCount2 } = metrics_exports;
 var level = new Level({ renderer, tileCount: tileCount2 });
 level.play();

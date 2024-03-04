@@ -5,24 +5,22 @@ const DPR = (devicePixelRatio > 1 ? 2 : 1);
 
 export default class Canvas extends Renderer {
 	readonly node = document.createElement("canvas");
-	readonly ctx = this.node.getContext("2d")!;
+	protected ctx = this.node.getContext("2d")!;
+	protected tileSize: number[];
 
-	constructor(tileCount: number[], tileSize: number[]) {
-		super(tileCount, tileSize);
-
-		const width = tileCount[0] * tileSize[0];
-		const height = tileCount[1] * tileSize[1];
-
+	configure(tileCount: number[], tileSize: number[]) {
 		const { node, ctx } = this;
-		node.width = width * DPR;
-		node.height = height * DPR;
-		node.style.width = `${width}px`;
-		node.style.height = `${height}px`;
 
+		node.width = tileCount[0] * tileSize[0] * DPR;
+		node.height = tileCount[1] * tileSize[1] * DPR;
+
+		ctx.restore();
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.font = `bold ${tileSize[1]}px input`;
 		ctx.scale(DPR, DPR);
+
+		this.tileSize = tileSize;
 	}
 
 	draw(x: number, y: number, drawables: Drawable[]) {
@@ -43,6 +41,8 @@ export default class Canvas extends Renderer {
 			ctx.fillText(visual.ch, (x+0.5)*tileSize[0], (y+0.5)*tileSize[1] + 1); // FIXME +1
 		}
 	}
+
+	remove() {}
 }
 
 function resolveVisual(visuals: (Partial<Visual> | null)[]): Visual {

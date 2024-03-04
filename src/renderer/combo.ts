@@ -12,13 +12,13 @@ export default class Combo extends Renderer {
 		return super.computeTileSize(tileCount, halfArea, aspectRatioRange);
 	}
 
-	constructor(tileCount: number[], tileSize: number[]) {
-		super(tileCount, tileSize);
+	constructor() {
+		super();
 
 		const { node } = this;
 		node.className = "combo";
 
-		let renderers = [Canvas, DOM].map(r => new r(tileCount, tileSize));
+		let renderers = [Canvas, DOM].map(r => new r());
 		node.append(...renderers.map(r => r.node));
 
 		this.renderers = renderers;
@@ -30,5 +30,9 @@ export default class Combo extends Renderer {
 
 	remove(drawable: Drawable) {
 		this.renderers.forEach(r => r.remove(drawable));
+	}
+
+	configure(tileCount: number[], tileSize: number[]) {
+		this.renderers.forEach(r => r.configure(tileCount, tileSize));
 	}
 }

@@ -7,22 +7,46 @@ export let tileCount: number[];
 export let tileSize: number[];
 export let charWidth: number;
 export let Renderer = Combo;
+const { style } = document.documentElement;
+
+
+let resizeTimeout: ReturnType<typeof setTimeout>;
+
+
+function onResized() {
+	measure();
+	window.dispatchEvent(new CustomEvent("metrics-change"));
+}
+
+function onResize() {
+	if (resizeTimeout) { clearTimeout(resizeTimeout); }
+	resizeTimeout = setTimeout(onResized, 100);
+}
+
+function measure() {
+	let realTileCount = [tileCount[0], tileCount[1]+5];
+	tileSize = Renderer.computeTileSize(realTileCount, [window.innerWidth, window.innerHeight], [0.7, 1.0]);
+	console.log(tileSize)
+
+	style.setProperty("--tile-width", `${tileSize[0]}px`);
+	style.setProperty("--tile-height", `${tileSize[1]}px`);
+
+	charWidth = measureCharWidth();
+	style.setProperty("--char-width", `${charWidth}px`);
+}
 
 export async function init(tc: number[]) {
-	const { style } = document.documentElement;
 	tileCount = tc;
+
+	style.setProperty("--map-width", String(tileCount[0]));
+	style.setProperty("--map-height", String(tileCount[1]));
 
 	document.fonts.forEach(f => f.load());
 	await document.fonts.ready;
 
-	tileSize = Renderer.computeTileSize(tileCount, [window.innerWidth*.9, window.innerHeight*.9], [0.7, 1.0]);
+	measure();
 
-	style.setProperty("--tile-width", `${tileSize[0]}px`);
-	style.setProperty("--tile-height", `${tileSize[1]}px`);
-	style.setProperty("--map-width", String(tileCount[0]));
-
-	charWidth = measureCharWidth();
-	style.setProperty("--char-width", `${charWidth}px`);
+	window.addEventListener("resize", onResize);
 }
 
 function measureCharWidth() {

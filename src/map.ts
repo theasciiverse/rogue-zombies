@@ -2,19 +2,27 @@ import Renderer, { Drawable, Visual } from "./renderer/renderer.js";
 import Being from "./beings/being.js";
 import Item from "./items/item.js";
 import Background from "./background.js";
+import * as metrics from "./metrics.js";
 
 
 export default class Map {
 	protected beings: Being[] = [];
 	protected items: Item[] = [];
 	protected bg: Background;
+	protected fx = new window.Map<string, Drawable>();
 	protected oldPositions = new window.Map<Drawable, number[]>();
 
 	constructor(readonly width: number, readonly height: number, readonly renderer: Renderer) {
 		this.bg = new Background(width, height);
 
-		for (let i=0;i<width;i++) {
-			for (let j=0;j<height;j++) {
+		window.addEventListener("metrics-change", () => this.onMetricsChange());
+		this.onMetricsChange();
+	}
+
+	protected onMetricsChange() {
+		this.renderer.configure(metrics.tileCount, metrics.tileSize);
+		for (let i=0;i<this.width;i++) {
+			for (let j=0;j<this.height;j++) {
 				this.redraw([i, j]);
 			}
 		}
@@ -61,6 +69,25 @@ export default class Map {
 		this.redraw([x, y]);
 	}
 
+	setFX(x: number, y: number, visual: Partial<Visual> | null) {
+		const { fx } = this;
+		let key = `${x},${y}`;
+		let existing = fx.get(key);
+
+		if (visual) {
+			if (existing) {
+				existing.visual = visual;
+			} else {
+				fx.set(key, {position: [x, y], visual});
+			}
+		} else {
+			fx.delete(key);
+			existing && this.renderer.remove(existing);
+		}
+
+		this.redraw([x, y]);
+	}
+
 	changed(what: Drawable) {
 		const { oldPositions } = this;
 		let op = oldPositions.get(what);
@@ -77,7 +104,7 @@ export default class Map {
 	}
 
 	protected getDrawables(x: number, y: number) {
-		const { bg } = this;
+		const { bg, fx } = this;
 
 		let drawables: Drawable[] = [];
 
@@ -88,6 +115,9 @@ export default class Map {
 
 		let being = this.getBeing(x, y);
 		being && drawables.push(being);
+
+		let fxd = fx.get(`${x},${y}`);
+		fxd && drawables.push(fxd);
 
 		return drawables;
 	}

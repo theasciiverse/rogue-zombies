@@ -1,5 +1,4 @@
-import Being from "./beings/being.js";
-import Item from "./items/item.js";
+import Player from "./beings/player.js";
 import Zombie from "./beings/zombie.js";
 import Map from "./map.js";
 import * as rules from "./rules.js";
@@ -10,16 +9,18 @@ export default class Zombies {
 	protected rounds = 0;
 	protected spawnPotential = 1;
 
-	constructor(protected map: Map, protected player: Being) {
+	constructor(protected map: Map, protected player: Player) {
 	}
 
-	play() {
+	async play() {
 		const { zombies, player } = this;
 		this.rounds++;
 
 		let activeZombies = zombies.filter(_ => Math.random() > rules.ZOMBIE_MOVE_CHANCE);
 		// FIXME: sort podle vzdalenosti od hrace
-		activeZombies.forEach(z => z.play(player));
+		for (let i=0; i<activeZombies.length;i++) {
+			await activeZombies[i].play(player);
+		}
 
 		let spawnPotential = this.updateSpawnPotential();
 		if (spawnPotential >= 1) {
@@ -29,18 +30,9 @@ export default class Zombies {
 		}
 	}
 
-	kill(zombie: Zombie, source: Being | Item) {
-		const { map } = this;
-
-		console.log("zombie", zombie, "killed by", source);
-
-		// FIXME adjust money
-
+	remove(zombie: Zombie) {
+		this.player.money++;
 		this.zombies = this.zombies.filter(z => z != zombie);
-
-		map.removeBeing(zombie);
-		let corpse = zombie.toCorpse();
-		map.setBackground(zombie.position[0], zombie.position[1], corpse);
 	}
 
 	protected spawn(amount: number) {

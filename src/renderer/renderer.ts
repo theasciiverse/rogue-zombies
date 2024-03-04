@@ -10,7 +10,7 @@ export interface Visual {
 };
 
 
-export default class Renderer {
+export default abstract class Renderer {
 	readonly node: HTMLElement;
 
 	static computeTileSize(tileCount: number[], area: number[], aspectRatioRange: number[]) {
@@ -26,11 +26,7 @@ export default class Renderer {
 		return [w, h];
 	}
 
-	constructor(readonly tileCount: number[], readonly tileSize: number[]) {
-
-	}
-
-	draw(x: number, y: number, drawables: Drawable[]) {}
-
-	remove(drawable: Drawable) {}
+	abstract configure(tileCount: number[], tileSized: number[]): void;
+	abstract draw(x: number, y: number, drawables: Drawable[]): void;
+	abstract remove(drawable: Drawable): void;
 }

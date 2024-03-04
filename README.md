@@ -17,7 +17,7 @@ WIP!
 AKA the development diary
 
 - Day #1 (Sunday 3. 3.): coffee, core structure, procrastinating with the engine, moving "@", basic ui, undecided on rendering
-- Day #2 (Monday 4. 3.): ice tea, item usage
+- Day #2 (Monday 4. 3.): ice tea, item usage, renderer autosizing, explosions, some items are working
 
 ## Legacy
 

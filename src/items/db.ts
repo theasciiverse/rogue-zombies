@@ -1,59 +1,57 @@
 import Crowbar from "./crowbar.js";
+import Barricade from "./barricade.js";
+import Rake from "./rake.js";
+import Mine from "./mine.js";
+import Bazooka from "./bazooka.js";
+import Wire from "./wire.js";
+import Fence from "./fence.js";
 
 
 export const ITEMS = [{
 	id: "crowbar",
-	name: "Crowbar",
 	key: "1",
 	price: 0,
 	amount: 0,
-	description: "Melee range, unlimited uses. You already have this.",
 	ctor: Crowbar
 } as const, {
 	id: "barricade",
-	name: "Wooden barricade",
 	short: "Barricade",
 	key: "2",
 	price: 1,
 	amount: 3,
-	description: "Can hold them for some time."
+	ctor: Barricade
 } as const, {
 	id: "rake",
-	name: "Rake",
 	key: "3",
 	price: 1,
 	amount: 3,
-	description: "Kills one zombie dumb enough to step on it."
+	ctor: Rake
 } as const, {
 	id: "mine",
-	name: "Mine",
 	key: "4",
 	price: 3,
 	amount: 1,
-	description: "Explodes when stepped on by a zombie."
+	ctor: Mine
 } as const, {
 	id: "bazooka",
-	name: "Bazooka",
 	key: "5",
 	price: 5,
 	amount: 1,
-	description: "Flys in a straight line, explodes on impact."
+	ctor: Bazooka
 } as const, {
 	id: "wire",
-	name: "Barbed wire",
 	short: "Wire",
 	key: "6",
 	price: 3,
 	amount: 2,
-	description: "Auto-connects to nearby wires. Has little health."
+	ctor: Wire
 } as const, {
 	id: "fence",
-	name: "Electric fence",
 	short: "Fence",
 	key: "7",
 	price: 3,
 	amount: 2,
-	description: "Auto-connects to nearby fences. Has more health."
+	ctor: Fence
 } as const]
 
 export type ItemTypes = (typeof ITEMS)[number]["id"];

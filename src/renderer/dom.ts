@@ -5,18 +5,12 @@ export default class DOM extends Renderer {
 	readonly node = document.createElement("div");
 	readonly nodes = new Map<Drawable, HTMLElement>();
 
-	constructor(tileCount: number[], tileSize: number[]) {
-		super(tileCount, tileSize);
-
-		const { node } = this;
-		node.className = "renderer";
-
-		node.style.setProperty("--tile-width", `${tileSize[0]}px`);
-		node.style.setProperty("--tile-height", `${tileSize[1]}px`);
-
-		node.style.width = `${tileCount[0]*tileSize[0]}px`;
-		node.style.height = `${tileCount[1]*tileSize[1]}px`;
+	constructor() {
+		super();
+		this.node.className = "renderer";
 	}
+
+	configure() {}
 
 	draw(x: number, y: number, drawables: Drawable[]) {
 		const { node, nodes } = this;

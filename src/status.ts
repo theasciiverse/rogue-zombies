@@ -67,7 +67,7 @@ function buildItem(it: ItemTemplate, player: Player) {
 	let c = document.createElement("span");
 	c.className = "count";
 	c.textContent = (count == Infinity ? "∞" : String(count));
-	node.append(kbd, it.short || it.name, c, "  ");
+	node.append(kbd, it.short || it.ctor.name, c, "  ");
 
 	return node;
 }

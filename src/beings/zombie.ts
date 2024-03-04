@@ -1,3 +1,4 @@
+import Entity from "../entity.js";
 import Being from "./being.js";
 import Item from "../items/item.js";
 import Zombies from "../zombies.js";
@@ -9,13 +10,13 @@ const COLORS = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "Saddl
 
 type InvalidResult = { type: "invalid" };
 type PlayerResult = { type: "player" };
-type MoveResult = { type: "move", dist: number, position: number[] };
+type MoveResult = { type: "move", dist: number, position: number[], item?: Item };
 type ItemResult = { type: "item", dist: number, item: Item };
 type MovementResult = InvalidResult | PlayerResult | MoveResult | ItemResult;
 
 
 export default class Zombie extends Being {
-	visual = {ch:CHARS.random(), fg:COLORS.random()};
+	readonly visual = {ch:CHARS.random(), fg:COLORS.random()};
 
 	constructor(map: Map, protected zombies: Zombies) {
 		super(map);
@@ -23,7 +24,7 @@ export default class Zombie extends Being {
 
 	get name() { return (this.visual.ch == "z"? "zombie" : "large zombie"); }
 
-	play(player: Being) {
+	async play(player: Being) {
 		const { position } = this;
 
 		let results = DIRS.map(dir => {
@@ -36,14 +37,18 @@ export default class Zombie extends Being {
 		if (!best)  {return; }
 
 		switch (best.type) {
-			case "player": player.damage(this); break;
-			case "move": this.position = best.position; break;
+			case "player": await player.damage(this); break;
 			case "item": best.item.damage(this); break;
+			case "move":
+				this.position = best.position;
+				if (best.item) { await best.item.activate(this); }
+			break;
 		}
 	}
 
-	damage(source: Being | Item) {
-		this.zombies.kill(this, source);
+	die(source: Entity) {
+		super.die(source);
+		this.zombies.remove(this);
 	}
 
 	protected getMovementResult(x: number, y: number, player: Being): MovementResult {
@@ -67,7 +72,7 @@ export default class Zombie extends Being {
 		if (item && item.blocks) {
 			return {type:"item", dist, item};
 		} else {
-			return {type:"move", dist, position:[x, y]};
+			return {type:"move", dist, position:[x, y], item};
 		}
 	}
 }
