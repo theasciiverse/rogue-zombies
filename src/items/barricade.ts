@@ -14,23 +14,23 @@ export default class Barricade extends Item {
 	readonly visual = { ch: "#", fg: "" };
 	protected _hp = COLORS.length-1;
 
-	async damage(source: Entity) {
-		await super.damage(source);
+	damage(source: Entity) {
+		super.damage(source);
 		if (this._hp > 0) {
 			this.visual.fg = COLORS[this._hp];
 			this.map.changed(this);
 		}
 	}
 
-	async use(position: number[], direction: number[]) {
-		let ok = await super.use(position, direction);
+	use(position: number[], direction: number[]) {
+		let ok = super.use(position, direction);
 		if (!ok) { return false; }
 
 		let tx = position[0] + direction[0];
 		let ty = position[1] + direction[1];
 		this._position = [tx, ty];
 		this.map.addItem(this); // fixme pridat vickrat
-		await log.add("You build a barricade.");
+		log.add("You build a barricade.");
 
 		return true;
 	}

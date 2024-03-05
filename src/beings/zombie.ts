@@ -37,7 +37,7 @@ export default class Zombie extends Being {
 		if (!best)  {return; }
 
 		switch (best.type) {
-			case "player": await player.damage(this); break;
+			case "player": player.damage(this); break;
 			case "item": best.item.damage(this); break;
 			case "move":
 				this.position = best.position;
@@ -68,7 +68,6 @@ export default class Zombie extends Being {
 		if (dist > currentDistance) { return {type:"invalid"}; } // pohorsime si
 
 		let item = map.getItem(x, y);
-
 		if (item && item.blocks) {
 			return {type:"item", dist, item};
 		} else {

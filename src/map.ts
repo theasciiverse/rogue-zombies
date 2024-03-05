@@ -52,6 +52,12 @@ export default class Map {
 		return this.items.find(item => item.position[0] == x && item.position[1] == y);
 	}
 
+	getBlocker(x: number, y: number) {
+		let item = this.getItem(x, y);
+		if (item && item.blocks) { return item; }
+		return this.getBeing(x, y);
+	}
+
 	removeBeing(being: Being) {
 		this.beings = this.beings.filter(b => b != being);
 		this.renderer.remove(being);

@@ -8,46 +8,57 @@ interface HistoryItem {
 }
 
 const node = document.querySelector<HTMLElement>("#log")!;
-let history: HistoryItem[] = [];
 
-function computeHistoryLength() {
-	return history.reduce((acc, h) => acc + h.length, 0);
-}
+let shown: HistoryItem[] = [];
+let pending: HistoryItem[] = [];
 
-export async function add(str: string) {
+
+export function add(str: string) {
 	let span = document.createElement("span");
 	span.textContent = str + " ";
 	let length = str.length+1;
 
-	let wouldBeLength = computeHistoryLength() + length;
-	let limit = metrics.tileCount[0]*2 - 15;
+	pending.push({node: span, length});
+	showPending();
+}
 
-	if (wouldBeLength > limit) {
-		let more = document.createElement("span");
-		let kbd = document.createElement("kbd");
-		kbd.textContent = "space";
-		more.append("...", kbd);
-		node.append(more);
-		while (true) {
-			let key = await keyboard.readKey();
-			if (key.code == "Space") { break; }
-		}
-		more.remove();
-	}
-
-	history.push({node: span, length});
-	node.append(span);
-
-	// remove from the beginning
-	let totalLength = computeHistoryLength();
-	while (totalLength > limit) {
-		let first = history.shift()!;
-		first.node.remove();
-		totalLength -= first.length;
+export async function flush() {
+	while (pending.length > 0) {
+		await waitForMore();
+		while (shown.length > 0) { shown.shift()!.node.remove(); }
+		showPending();
 	}
 }
 
 export function clear() {
 	node.replaceChildren();
-	history = [];
+	shown = [];
+	pending = [];
+}
+
+function showPending() {
+	let limit = metrics.tileCount[0]*2 - 15;
+	let shownLength = shown.reduce((acc, h) => acc + h.length, 0);
+
+	while (pending.length > 0) {
+		let first = pending[0];
+		if (shownLength + first.length > limit) { break; }
+
+		node.append(first.node);
+		shownLength += first.length;
+		shown.push(pending.shift()!);
+	}
+}
+
+async function waitForMore() {
+	let more = document.createElement("span");
+	let kbd = document.createElement("kbd");
+	kbd.textContent = "space";
+	more.append("...", kbd);
+	node.append(more);
+	while (true) {
+		let key = await keyboard.readKey();
+		if (key.code == "Space") { break; }
+	}
+	more.remove();
 }

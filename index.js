@@ -41,7 +41,7 @@ var Entity = class {
     this._position = position;
     this.map.changed(this);
   }
-  async damage(source) {
+  damage(source) {
     this._hp -= 1;
     if (this._hp == 0) {
       this.die(source);
@@ -269,42 +269,55 @@ function measureCharWidth() {
 
 // src/log.ts
 var node = document.querySelector("#log");
-var history = [];
-function computeHistoryLength() {
-  return history.reduce((acc, h) => acc + h.length, 0);
-}
-async function add(str) {
+var shown = [];
+var pending = [];
+function add(str) {
   let span = document.createElement("span");
   span.textContent = str + " ";
   let length = str.length + 1;
-  let wouldBeLength = computeHistoryLength() + length;
-  let limit = tileCount[0] * 2 - 15;
-  if (wouldBeLength > limit) {
-    let more = document.createElement("span");
-    let kbd = document.createElement("kbd");
-    kbd.textContent = "space";
-    more.append("...", kbd);
-    node.append(more);
-    while (true) {
-      let key = await readKey();
-      if (key.code == "Space") {
-        break;
-      }
+  pending.push({ node: span, length });
+  showPending();
+}
+async function flush() {
+  while (pending.length > 0) {
+    await waitForMore();
+    while (shown.length > 0) {
+      shown.shift().node.remove();
     }
-    more.remove();
-  }
-  history.push({ node: span, length });
-  node.append(span);
-  let totalLength = computeHistoryLength();
-  while (totalLength > limit) {
-    let first = history.shift();
-    first.node.remove();
-    totalLength -= first.length;
+    showPending();
   }
 }
 function clear() {
   node.replaceChildren();
-  history = [];
+  shown = [];
+  pending = [];
+}
+function showPending() {
+  let limit = tileCount[0] * 2 - 15;
+  let shownLength = shown.reduce((acc, h) => acc + h.length, 0);
+  while (pending.length > 0) {
+    let first = pending[0];
+    if (shownLength + first.length > limit) {
+      break;
+    }
+    node.append(first.node);
+    shownLength += first.length;
+    shown.push(pending.shift());
+  }
+}
+async function waitForMore() {
+  let more = document.createElement("span");
+  let kbd = document.createElement("kbd");
+  kbd.textContent = "space";
+  more.append("...", kbd);
+  node.append(more);
+  while (true) {
+    let key = await readKey();
+    if (key.code == "Space") {
+      break;
+    }
+  }
+  more.remove();
 }
 
 // src/items/item.ts
@@ -321,21 +334,16 @@ var Item = class extends Entity {
   die(source) {
     this.map.removeItem(this);
   }
-  async use(position, direction) {
+  use(position, direction) {
     const { map } = this;
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
-    let being = map.getBeing(tx, ty);
-    let item = map.getItem(tx, ty);
-    if (being) {
-      await add(`Cannot use ${this.name}: there is a ${being.name} standing there!`);
+    let blocker = map.getBlocker(tx, ty);
+    if (blocker) {
+      add(`Cannot use ${this.name}: ${blocker.name.article()} is there!`);
       return false;
-    } else if (item) {
-      await add(`Cannot use ${this.name}: ${item.name.article()} is ${item.blocks ? "standing" : "lying"} there!`);
-      return false;
-    } else {
-      return true;
     }
+    return true;
   }
 };
 
@@ -344,19 +352,19 @@ var Crowbar = class extends Item {
   visual = {};
   static name = "Crowbar";
   static description = "Melee range, unlimited uses. You already have this.";
-  async use(position, direction) {
+  use(position, direction) {
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
     let being = this.map.getBeing(tx, ty);
     let item = this.map.getItem(tx, ty);
     if (being) {
-      await add(`You hit the ${being.name}.`);
+      add(`You hit the ${being.name}.`);
       being.damage(this);
     } else if (item) {
-      await add(`You hit the ${item.name}.`);
+      add(`You hit the ${item.name}.`);
       item.damage(this);
     } else {
-      await add("You swing the crowbar in the empty space.");
+      add("You swing the crowbar in the empty space.");
     }
     return true;
   }
@@ -370,15 +378,15 @@ var Barricade = class extends Item {
   blocks = true;
   visual = { ch: "#", fg: "" };
   _hp = COLORS.length - 1;
-  async damage(source) {
-    await super.damage(source);
+  damage(source) {
+    super.damage(source);
     if (this._hp > 0) {
       this.visual.fg = COLORS[this._hp];
       this.map.changed(this);
     }
   }
-  async use(position, direction) {
-    let ok = await super.use(position, direction);
+  use(position, direction) {
+    let ok = super.use(position, direction);
     if (!ok) {
       return false;
     }
@@ -386,7 +394,7 @@ var Barricade = class extends Item {
     let ty = position[1] + direction[1];
     this._position = [tx, ty];
     this.map.addItem(this);
-    await add("You build a barricade.");
+    add("You build a barricade.");
     return true;
   }
 };
@@ -396,8 +404,8 @@ var Rake = class extends Item {
   static name = "Rake";
   static description = "Kills one zombie dumb enough to step on it.";
   visual = { ch: "]", fg: "#999" };
-  async use(position, direction) {
-    let ok = await super.use(position, direction);
+  use(position, direction) {
+    let ok = super.use(position, direction);
     if (!ok) {
       return false;
     }
@@ -405,7 +413,7 @@ var Rake = class extends Item {
     let ty = position[1] + direction[1];
     this._position = [tx, ty];
     this.map.addItem(this);
-    await add("You set up a rake.");
+    add("You set up a rake.");
     return true;
   }
   async activate(being) {
@@ -439,7 +447,7 @@ var Zombie = class extends Being {
     }
     switch (best.type) {
       case "player":
-        await player.damage(this);
+        player.damage(this);
         break;
       case "item":
         best.item.damage(this);
@@ -543,7 +551,6 @@ function extractZombies(positions, map) {
   return zombies;
 }
 function drawExplosions(map, positions, fraction) {
-  console.log("draw step", fraction);
   let amount = Math.round(3 * 255 * (1 - fraction));
   let r = Math.max(0, Math.min(amount - 0 * 255, 255));
   let g = Math.max(0, Math.min(amount - 1 * 255, 255));
@@ -571,8 +578,8 @@ var Mine = class extends Item {
   static name = "Mine";
   static description = "Explodes when stepped on by a zombie.";
   visual = { ch: "*", fg: "gray" };
-  async use(position, direction) {
-    let ok = await super.use(position, direction);
+  use(position, direction) {
+    let ok = super.use(position, direction);
     if (!ok) {
       return false;
     }
@@ -580,7 +587,7 @@ var Mine = class extends Item {
     let ty = position[1] + direction[1];
     this._position = [tx, ty];
     this.map.addItem(this);
-    await add("You set up a mine.");
+    add("You set up a mine.");
     return true;
   }
   async activate(being) {
@@ -592,34 +599,52 @@ var Mine = class extends Item {
 
 // src/items/bazooka.ts
 var Bazooka = class extends Item {
+  visual = { ch: "*", fg: "yellow" };
   static name = "Bazooka";
   static description = "Flys in a straight line, explodes on impact.";
   async use(position, direction) {
-    let tx = position[0] + direction[0];
-    let ty = position[1] + direction[1];
-    let being = this.map.getBeing(tx, ty);
-    if (being) {
-      await add(`You hit the ${being.name}.`);
-      being.damage(this);
-    } else {
-      await add("You swing the crowbar in the empty space.");
+    const { map, visual } = this;
+    add("You launch a rocket...");
+    let tx = position[0];
+    let ty = position[1];
+    while (true) {
+      tx += direction[0];
+      ty += direction[1];
+      if (!map.isPositionValid(tx, ty)) {
+        add("it flies away.");
+        break;
+      }
+      let target = map.getBlocker(tx, ty);
+      if (target) {
+        add(`${target.name.article()} is hit!`);
+        await explode(map, [tx, ty], 2, this);
+        break;
+      } else {
+        map.setFX(tx, ty, visual);
+        await sleep2(50);
+        map.setFX(tx, ty, null);
+      }
     }
+    return true;
   }
 };
+function sleep2(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // src/items/wire.ts
 var Wire = class extends Item {
   static name = "Barbed wire";
   static description = "Auto-connects to nearby wires. Has little health.";
-  async use(position, direction) {
+  use(position, direction) {
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
     let being = this.map.getBeing(tx, ty);
     if (being) {
-      await add(`You hit the ${being.name}.`);
+      add(`You hit the ${being.name}.`);
       being.damage(this);
     } else {
-      await add("You swing the crowbar in the empty space.");
+      add("You swing the crowbar in the empty space.");
     }
   }
 };
@@ -628,15 +653,15 @@ var Wire = class extends Item {
 var Fence = class extends Item {
   static name = "Electric fence";
   static description = "Auto-connects to nearby fences. Has more health.";
-  async use(position, direction) {
+  use(position, direction) {
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
     let being = this.map.getBeing(tx, ty);
     if (being) {
-      await add(`You hit the ${being.name}.`);
+      add(`You hit the ${being.name}.`);
       being.damage(this);
     } else {
-      await add("You swing the crowbar in the empty space.");
+      add("You swing the crowbar in the empty space.");
     }
   }
 };
@@ -935,30 +960,28 @@ var Player = class extends Being {
       return false;
     }
     if (key.code == "KeyL") {
-      await add(String(Math.random()));
-      return false;
+      for (let i = 0; i < 10; i++) {
+        add(String(Math.random()));
+      }
+      return true;
     }
     return false;
   }
-  async moveBy(dx, dy) {
+  moveBy(dx, dy) {
     const { position, map } = this;
     let x = position[0] + dx;
     let y = position[1] + dy;
     if (!map.isPositionValid(x, y)) {
       return false;
     }
-    let being = map.getBeing(x, y);
+    let blocker = map.getBlocker(x, y);
+    if (blocker) {
+      add(`${blocker.name.article().capitalize()} blocks the way.`);
+      return false;
+    }
     let item = map.getItem(x, y);
-    if (being) {
-      await add(`${being.name.article().capitalize()} blocks the way.`);
-      return false;
-    }
-    if (item && item.blocks) {
-      await add(`${item.name.article().capitalize()} blocks the way.`);
-      return false;
-    }
-    if (item && !item.blocks) {
-      await add(`You carefully sidestep ${item.name.article()}.`);
+    if (item) {
+      add(`You carefully sidestep ${item.name.article()}.`);
     }
     this.position = [x, y];
     return true;
@@ -970,7 +993,7 @@ var Player = class extends Being {
     }
     let amount = this.getItem(it.id);
     if (!amount) {
-      await add(`You don't have any ${it.ctor.name}s.`);
+      add(`You don't have any ${it.ctor.name}s.`);
       return false;
     }
     let name = it.ctor.name;
@@ -984,22 +1007,22 @@ var Player = class extends Being {
     let item = new it.ctor(map);
     return item.use(position, direction);
   }
-  async damage(source) {
-    await add(`${source.name.article().capitalize()} hits you!`);
+  damage(source) {
+    add(`${source.name.article().capitalize()} hits you!`);
     super.damage(source);
     update(this);
   }
-  async die(source) {
+  die(source) {
     super.die(source);
-    await add("You die...");
+    add("You die...");
   }
 };
 async function waitForDirection(prefix) {
-  await add(`${prefix}: pick a direction, ESC to abort...`);
+  add(`${prefix}: pick a direction, ESC to abort...`);
   while (true) {
     let key = await readKey();
     if (key.key == "Escape") {
-      await add("aborted.");
+      add("aborted.");
       return null;
     } else if (key.code in MOVEMENT) {
       return MOVEMENT[key.code];
@@ -1152,6 +1175,13 @@ var Map2 = class {
   getItem(x, y) {
     return this.items.find((item) => item.position[0] == x && item.position[1] == y);
   }
+  getBlocker(x, y) {
+    let item = this.getItem(x, y);
+    if (item && item.blocks) {
+      return item;
+    }
+    return this.getBeing(x, y);
+  }
   removeBeing(being) {
     this.beings = this.beings.filter((b) => b != being);
     this.renderer.remove(being);
@@ -1249,6 +1279,7 @@ var Level = class {
     while (!this.done) {
       await player.play();
       await zombies.play();
+      await flush();
     }
   }
   get done() {

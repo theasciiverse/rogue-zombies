@@ -9,15 +9,15 @@ export default class Mine extends Item {
 	static description = "Explodes when stepped on by a zombie.";
 	readonly visual = {ch:"*", fg:"gray"};
 
-	async use(position: number[], direction: number[]) {
-		let ok = await super.use(position, direction);
+	use(position: number[], direction: number[]) {
+		let ok = super.use(position, direction);
 		if (!ok) { return false; }
 
 		let tx = position[0] + direction[0];
 		let ty = position[1] + direction[1];
 		this._position = [tx, ty];
 		this.map.addItem(this);
-		await log.add("You set up a mine.");
+		log.add("You set up a mine.");
 
 		return true;
 	}

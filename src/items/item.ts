@@ -13,22 +13,18 @@ export default abstract class Item extends Entity {
 	async activate(being: Being) {} // stepped on something
 
 	die(source: Entity) { this.map.removeItem(this); }
-	async use(position: number[], direction: number[]) { // use from inventory
+	use(position: number[], direction: number[]): boolean | Promise<boolean> { // use from inventory
 		const { map } = this;
 
 		let tx = position[0] + direction[0];
 		let ty = position[1] + direction[1];
-		let being = map.getBeing(tx, ty);
-		let item = map.getItem(tx, ty);
+		let blocker = map.getBlocker(tx, ty);
 
-		if (being) {
-			await log.add(`Cannot use ${this.name}: there is a ${being.name} standing there!`);
+		if (blocker) {
+			log.add(`Cannot use ${this.name}: ${blocker.name.article()} is there!`);
 			return false;
-		} else if (item) {
-			await log.add(`Cannot use ${this.name}: ${item.name.article()} is ${item.blocks ? "standing" : "lying"} there!`);
-			return false;
-		} else {
-			return true;
 		}
+
+		return true;
 	}
 }

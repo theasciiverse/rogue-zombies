@@ -17,7 +17,7 @@ export default abstract class Entity {
 		this.map.changed(this);
 	}
 
-	async damage(source: Entity) {
+	damage(source: Entity) {
 		this._hp -= 1;
 		if (this._hp == 0) { this.die(source); }
 	}

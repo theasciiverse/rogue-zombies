@@ -6,16 +6,16 @@ export default class Wire extends Item {
 	static name = "Barbed wire";
 	static description = "Auto-connects to nearby wires. Has little health.";
 
-	async use(position: number[], direction: number[]) {
+	use(position: number[], direction: number[]) {
 		let tx = position[0] + direction[0];
 		let ty = position[1] + direction[1];
 		let being = this.map.getBeing(tx, ty);
 
 		if (being) {
-			await log.add(`You hit the ${being.name}.`);
+			log.add(`You hit the ${being.name}.`);
 			being.damage(this);
 		} else {
-			await log.add("You swing the crowbar in the empty space.");
+			log.add("You swing the crowbar in the empty space.");
 		}
 	}
 }

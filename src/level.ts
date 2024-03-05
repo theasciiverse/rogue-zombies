@@ -4,6 +4,7 @@ import Zombies from "./zombies.js";
 import Map from "./map.js";
 import Renderer from "./renderer/renderer.js";
 import House from "./items/house.js";
+import * as log from "./log.js";
 
 
 interface Config {
@@ -43,6 +44,7 @@ export default class Level {
 		while (!this.done) {
 			await player.play();
 			await zombies.play();
+			await log.flush();
 		}
 	}
 

@@ -5,7 +5,6 @@ import Zombie from "./beings/zombie.js";
 
 function sleep(ms: number) { return new Promise<void>(resolve => setTimeout(resolve, ms)); }
 
-
 function gatherPositions(map: Map, center: number[], r: number) {
 	let positions: number[][] = [];
 
@@ -31,7 +30,6 @@ function extractZombies(positions: number[][], map: Map) {
 }
 
 function drawExplosions(map: Map, positions: number[][], fraction: number) {
-	console.log("draw step", fraction);
 	let amount = Math.round(3*255*(1-fraction));
 	let r = Math.max(0, Math.min(amount-0*255, 255));
 	let g = Math.max(0, Math.min(amount-1*255, 255));

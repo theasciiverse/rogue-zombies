@@ -81,35 +81,31 @@ export default class Player extends Being {
 		}
 
 		if (key.code == "KeyL") {
-			await log.add(String(Math.random()));
-			return false;
+			for (let i=0;i<10;i++) {
+				log.add(String(Math.random()));
+			}
+			return true;
 		}
 
 		return false;
 	}
 
-	protected async moveBy(dx: number, dy: number) {
+	protected moveBy(dx: number, dy: number) {
 		const { position, map } = this;
 		let x = position[0]+dx;
 		let y = position[1]+dy;
 
 		if (!map.isPositionValid(x, y)) { return false; }
 
-		let being = map.getBeing(x, y);
+		let blocker = map.getBlocker(x, y);
+		if (blocker) {
+			log.add(`${blocker.name.article().capitalize()} blocks the way.`);
+			return false;
+		}
+
 		let item = map.getItem(x, y);
-
-		if (being) {
-			await log.add(`${being.name.article().capitalize()} blocks the way.`);
-			return false;
-		}
-
-		if (item && item.blocks) {
-			await log.add(`${item.name.article().capitalize()} blocks the way.`);
-			return false;
-		}
-
-		if (item && !item.blocks) {
-			await log.add(`You carefully sidestep ${item.name.article()}.`);
+		if (item) {
+			log.add(`You carefully sidestep ${item.name.article()}.`);
 		}
 
 		this.position = [x, y];
@@ -122,7 +118,7 @@ export default class Player extends Being {
 
 		let amount = this.getItem(it.id);
 		if (!amount) {
-			await log.add(`You don't have any ${it.ctor.name}s.`);
+			log.add(`You don't have any ${it.ctor.name}s.`);
 			return false;
 		}
 
@@ -139,24 +135,24 @@ export default class Player extends Being {
 		return item.use(position, direction);
 	}
 
-	async damage(source: Entity) {
-		await log.add(`${source.name.article().capitalize()} hits you!`);
+	damage(source: Entity) {
+		log.add(`${source.name.article().capitalize()} hits you!`);
 		super.damage(source);
 		status.update(this);
 	}
 
-	async die(source: Entity) {
+	die(source: Entity) {
 		super.die(source);
-		await log.add("You die...");
+		log.add("You die...");
 	}
 }
 
 async function waitForDirection(prefix: string): Promise<[number, number] | null> {
-	await log.add(`${prefix}: pick a direction, ESC to abort...`);
+	log.add(`${prefix}: pick a direction, ESC to abort...`);
 	while (true) {
 		let key = await keyboard.readKey();
 		if (key.key == "Escape") {
-			await log.add("aborted.");
+			log.add("aborted.");
 			return null;
 		} else if (key.code in MOVEMENT) {
 			return MOVEMENT[key.code];
