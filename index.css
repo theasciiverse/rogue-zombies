@@ -39,18 +39,17 @@ body {
 	justify-content: center;
 }
 
-canvas, .renderer {
+.renderer.canvas, .renderer.dom {
 	width: calc(var(--tile-width) * var(--map-width));
 	height: calc(var(--tile-height) * var(--map-height));
 }
 
-.renderer {
+.renderer.dom {
 	position: relative;
-	font-family: input;
 	font-weight: bold;
 }
 
-.renderer div {
+.renderer.dom div {
 	position: absolute;
 	width: var(--tile-width);
 	text-align: center;
@@ -61,62 +60,56 @@ canvas, .renderer {
 	transition: all 100ms;
 }
 
-.combo {
+.renderer.combo {
 	display: flex;
 }
 
-dialog {
-	padding: 0;
-	border-style: solid;
-	border-width: 1em 1ch;
-	border-color: #888;
-	outline: none;
-	color: inherit;
-	background-color: inherit;
-/*
-	&::backdrop {
-		background-color: transparent;
-		-webkit-backdrop-filter: blur(4px);
-		backdrop-filter: blur(4px);
-	}
-*/
-}
-
-.disabled {
+.disabled, .disabled kbd {
 	color: var(--dimmed);
 }
 
-dialog tr:not(.disabled) td:first-child {
-	font-weight: bold;
+dialog {
+	padding: 1em 1ch;
+	border: 2px solid var(--color);
+	outline: none;
+	color: inherit;
+	background-color: inherit;
+	font-size: 15px;
+	line-height: 1.3;
 }
 
 dialog::backdrop {
 	background-color: rgba(0, 0, 0, 0.5);
 }
 
+dialog h2 {
+	margin: 0;
+	font-size: 100%;
+	text-align: center;
+}
+
+dialog h2::before { content: "--== "; }
+dialog h2::after { content: " ==--"; }
+
 table {
 	border-collapse: collapse;
 }
 
-td {
-	padding: 0 1ch;
-}
+td { padding: 0; }
+th { text-align: left; }
+
+tbody td { padding-right: 2ch; }
 
 .price::after { content: "$"; }
 tr:not(.disabled) .price { color: gold; }
 .disabled .price { color: red; }
 
-th {
-	text-align: left;
-}
 
 kbd {
 	font: inherit;
 	color: lime;
 	font-weight: bold;
 }
-
-.disabled kbd { color: var(--dimmed); }
 
 kbd::before, kbd::after {
 	color: var(--dimmed);

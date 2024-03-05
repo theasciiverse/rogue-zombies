@@ -5,7 +5,7 @@ import { explode } from "../explosion.js";
 
 
 export default class Mine extends Item {
-	static name = "Mine";
+	static Name = "Mine";
 	static description = "Explodes when stepped on by a zombie.";
 	readonly visual = {ch:"*", fg:"gray"};
 

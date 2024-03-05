@@ -4,12 +4,12 @@ import * as log from "../log.js";
 
 
 export default abstract class Item extends Entity {
-	static name = "";
+	static Name = "";
 	static description = "";
 
 	readonly blocks: boolean = false;
 
-	get name() { return this.constructor.name; }
+	get name() { return (this.constructor as typeof Item).Name; }
 	die(source: Entity) { this.map.removeItem(this); }
 
 	activate(being: Being): void | Promise<void> {} // stepped on something

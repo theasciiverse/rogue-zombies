@@ -12,6 +12,12 @@ export default class Dialog {
 	protected resolve: (value: string | null) => void;
 	protected keys: Key[] = [];
 
+	constructor(title: string) {
+		let h2 = document.createElement("h2");
+		h2.textContent = title;
+		this.append(h2);
+	}
+
 	append(...nodes: (string | Node)[]) {
 		this.dialog.append(...nodes);
 	}

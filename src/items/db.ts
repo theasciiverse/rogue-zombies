@@ -18,7 +18,7 @@ export const ITEMS = [{
 	short: "Barricade",
 	key: "2",
 	price: 1,
-	amount: 3,
+	amount: 5,
 	ctor: Barricade
 }, {
 	id: "rake",

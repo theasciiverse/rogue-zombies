@@ -116,6 +116,10 @@ var Canvas = class extends Renderer {
   node = document.createElement("canvas");
   ctx = this.node.getContext("2d");
   tileSize;
+  constructor() {
+    super();
+    this.node.className = "renderer canvas";
+  }
   configure(tileCount3, tileSize2) {
     const { node: node3, ctx } = this;
     node3.width = tileCount3[0] * tileSize2[0] * DPR;
@@ -160,7 +164,7 @@ var DOM = class extends Renderer {
   nodes = /* @__PURE__ */ new Map();
   constructor() {
     super();
-    this.node.className = "renderer";
+    this.node.className = "renderer dom";
   }
   configure() {
   }
@@ -206,7 +210,7 @@ var Combo = class extends Renderer {
   constructor() {
     super();
     const { node: node3 } = this;
-    node3.className = "combo";
+    node3.className = "renderer combo";
     let renderers = [Canvas, DOM].map((r) => new r());
     node3.append(...renderers.map((r) => r.node));
     this.renderers = renderers;
@@ -322,11 +326,11 @@ async function waitForMore() {
 
 // src/items/item.ts
 var Item = class extends Entity {
-  static name = "";
+  static Name = "";
   static description = "";
   blocks = false;
   get name() {
-    return this.constructor.name;
+    return this.constructor.Name;
   }
   die(source) {
     this.map.removeItem(this);
@@ -352,10 +356,34 @@ var Item = class extends Entity {
   }
 };
 
+// src/sfx.ts
+var DB = {
+  "zombie-spawn": 8,
+  "rake": 3,
+  "crowbar": 3,
+  "swoosh": 1,
+  "barricade": 3
+};
+var audio = {};
+function init2() {
+  Object.entries(DB).forEach(([key, count]) => {
+    let list = [];
+    for (let i = 1; i <= count; i++) {
+      let a = new Audio(`sfx/${key}-${i}.mp3`);
+      a.load();
+      list.push(a);
+    }
+    audio[key] = list;
+  });
+}
+function play(what) {
+  audio[what].random().play();
+}
+
 // src/items/crowbar.ts
 var Crowbar = class extends Item {
   visual = {};
-  static name = "Crowbar";
+  static Name = "Crowbar";
   static description = "Melee range, unlimited uses. You already have this.";
   use(position, direction) {
     let tx = position[0] + direction[0];
@@ -363,12 +391,14 @@ var Crowbar = class extends Item {
     let being = this.map.getBeing(tx, ty);
     let item = this.map.getItem(tx, ty);
     if (being) {
+      play("crowbar");
       add(`You hit the ${being.name}.`);
       being.damage(this);
     } else if (item) {
       add(`You hit the ${item.name}.`);
       item.damage(this);
     } else {
+      play("swoosh");
       add("You swing the crowbar in the empty space.");
     }
     return true;
@@ -378,12 +408,13 @@ var Crowbar = class extends Item {
 // src/items/barricade.ts
 var COLORS = ["", "#300", "#850", "#c90"];
 var Barricade = class extends Item {
-  static name = "Wooden Barricade";
+  static Name = "Wooden Barricade";
   static description = "Can hold them for some time.";
   blocks = true;
   _hp = COLORS.length - 1;
   visual = { ch: "#", fg: COLORS[COLORS.length - 1] };
   damage(source) {
+    play("barricade");
     super.damage(source);
     if (this._hp > 0) {
       this.visual.fg = COLORS[this._hp];
@@ -406,7 +437,7 @@ var Barricade = class extends Item {
 
 // src/items/rake.ts
 var Rake = class extends Item {
-  static name = "Rake";
+  static Name = "Rake";
   static description = "Kills one zombie dumb enough to step on it.";
   visual = { ch: "]", fg: "#999" };
   use(position, direction) {
@@ -422,6 +453,7 @@ var Rake = class extends Item {
     return true;
   }
   activate(being) {
+    play("rake");
     this.map.removeItem(this);
     being.damage(this);
   }
@@ -582,7 +614,7 @@ async function explode(map, position, radius, source) {
 
 // src/items/mine.ts
 var Mine = class extends Item {
-  static name = "Mine";
+  static Name = "Mine";
   static description = "Explodes when stepped on by a zombie.";
   visual = { ch: "*", fg: "gray" };
   use(position, direction) {
@@ -607,7 +639,7 @@ var Mine = class extends Item {
 // src/items/bazooka.ts
 var Bazooka = class extends Item {
   visual = { ch: "*", fg: "yellow" };
-  static name = "Bazooka";
+  static Name = "Bazooka";
   static description = "Flys in a straight line, explodes on impact.";
   async use(position, direction) {
     const { map, visual } = this;
@@ -642,7 +674,7 @@ function sleep2(ms) {
 // src/items/wire.ts
 var CONNECTION_DISTANCE = 3;
 var Wire = class extends Item {
-  static name = "Barbed wire";
+  static Name = "Barbed wire";
   static description = "Auto-connects to nearby wires. Has little health.";
   visual = { ch: "#", fg: "#888" };
   activate(being) {
@@ -695,10 +727,10 @@ function tryConnection(position, direction, map, Ctor) {
 // src/items/fence.ts
 var COLORS3 = ["", "#008", "#33a", "#88f"];
 var Fence = class extends Wire {
-  static name = "Electric fence";
+  static Name = "Electric fence";
   static description = "Auto-connects to nearby fences. Has more health.";
   _hp = COLORS3.length - 1;
-  visual = { ch: "~", fg: COLORS3[this._hp] };
+  visual = { ch: "\u2248", fg: COLORS3[this._hp] };
   damage(source) {
     super.damage(source);
     if (this._hp > 0) {
@@ -720,7 +752,7 @@ var ITEMS = [{
   short: "Barricade",
   key: "2",
   price: 1,
-  amount: 3,
+  amount: 5,
   ctor: Barricade
 }, {
   id: "rake",
@@ -812,7 +844,7 @@ function buildItem(it, player) {
   let c = document.createElement("span");
   c.className = "count";
   c.textContent = count == Infinity ? "\u221E" : String(count);
-  node3.append(kbd, it.short || it.ctor.name, c, "  ");
+  node3.append(kbd, it.short || it.ctor.Name, c, "  ");
   return node3;
 }
 
@@ -821,6 +853,11 @@ var Dialog = class {
   dialog = document.createElement("dialog");
   resolve;
   keys = [];
+  constructor(title) {
+    let h2 = document.createElement("h2");
+    h2.textContent = title;
+    this.append(h2);
+  }
   append(...nodes) {
     this.dialog.append(...nodes);
   }
@@ -861,13 +898,10 @@ var Dialog = class {
 // src/dialogs/help.ts
 async function help() {
   while (true) {
-    let html = "Help!";
-    let dialog = new Dialog();
-    dialog.append(html);
+    let dialog = new Dialog("Help!");
     dialog.addKey({ id: "", key: "Escape" });
     dialog.addKey({ id: "one", key: "1" });
     let result = await dialog.show();
-    console.log("dialog", result);
     if (result == "") {
       break;
     }
@@ -878,9 +912,12 @@ async function help() {
 async function buy(player) {
   while (true) {
     let dialog = new Dialog("Buy items");
-    dialog.addKey({ id: "", key: "Escape" });
     let table = buildItemTable(player, dialog);
-    dialog.append("Buy", table);
+    dialog.append(table);
+    let info = document.createElement("p");
+    info.innerHTML = "Earn money by killing zombies. Press <kbd>esc</kbd> to exit.";
+    dialog.addKey({ id: "", key: "Escape" });
+    dialog.append(info);
     let result = await dialog.show();
     if (result == "") {
       break;
@@ -909,7 +946,7 @@ function buildItemRow(item, player, dialog) {
   let kbd = document.createElement("kbd");
   kbd.textContent = item.key;
   row.insertCell().append(kbd);
-  row.insertCell().textContent = item?.ctor?.name;
+  row.insertCell().textContent = item.ctor.Name;
   if (item.price > 0) {
     let price = document.createElement("span");
     price.className = "price";
@@ -918,7 +955,7 @@ function buildItemRow(item, player, dialog) {
   } else {
     row.insertCell().textContent = "-free-";
   }
-  row.insertCell().textContent = item?.ctor?.description;
+  row.insertCell().textContent = item.ctor.description;
   if (!disabled) {
     dialog.addKey({ id: item.id, code: `Numpad${item.key}` });
     dialog.addKey({ id: item.id, code: `Digit${item.key}` });
@@ -1033,12 +1070,12 @@ var Player = class extends Being {
     if (!it) {
       return false;
     }
+    let name = it.ctor.Name;
     let amount = this.getItem(it.id);
     if (!amount) {
-      add(`You don't have any ${it.ctor.name}s.`);
+      add(`You don't have any ${name}s.`);
       return false;
     }
-    let name = it.ctor.name;
     let direction = await waitForDirection(`Use ${name.article()}`);
     if (!direction) {
       return false;
@@ -1115,7 +1152,7 @@ var Zombies = class {
   }
   spawn(amount) {
     const { zombies, map } = this;
-    console.log("spawning", amount);
+    play("zombie-spawn");
     let corners = getCorners(map);
     for (let i = 0; i < amount; i++) {
       let corner = corners.random();
@@ -1331,6 +1368,7 @@ var Level = class {
 
 // src/index.ts
 await init([45, 30]);
+init2();
 var renderer = new Renderer2();
 document.querySelector("main").prepend(renderer.node);
 var { tileCount: tileCount2 } = metrics_exports;

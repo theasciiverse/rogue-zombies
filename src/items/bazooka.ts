@@ -6,7 +6,7 @@ import { explode } from "../explosion.js";
 export default class Bazooka extends Item {
 	readonly visual = {ch:"*", fg:"yellow"};
 
-	static name = "Bazooka";
+	static Name = "Bazooka";
 	static description = "Flys in a straight line, explodes on impact.";
 
 	async use(position: number[], direction: number[]) {

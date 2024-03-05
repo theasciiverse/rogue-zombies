@@ -7,7 +7,7 @@ export default class DOM extends Renderer {
 
 	constructor() {
 		super();
-		this.node.className = "renderer";
+		this.node.className = "renderer dom";
 	}
 
 	configure() {}

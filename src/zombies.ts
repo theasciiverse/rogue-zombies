@@ -2,6 +2,7 @@ import Player from "./beings/player.js";
 import Zombie from "./beings/zombie.js";
 import Map from "./map.js";
 import * as rules from "./rules.js";
+import * as sfx from "./sfx.js";
 
 
 export default class Zombies {
@@ -37,7 +38,7 @@ export default class Zombies {
 
 	protected spawn(amount: number) {
 		const { zombies, map } = this;
-		console.log("spawning", amount);
+		sfx.play("zombie-spawn");
 
 		let corners = getCorners(map);
 		for (let i=0;i<amount;i++) {

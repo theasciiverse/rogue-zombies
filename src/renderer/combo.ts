@@ -16,7 +16,7 @@ export default class Combo extends Renderer {
 		super();
 
 		const { node } = this;
-		node.className = "combo";
+		node.className = "renderer combo";
 
 		let renderers = [Canvas, DOM].map(r => new r());
 		node.append(...renderers.map(r => r.node));

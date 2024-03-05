@@ -9,7 +9,7 @@ import DIRS from "../dirs.js";
 const CONNECTION_DISTANCE = 3;
 
 export default class Wire extends Item {
-	static name = "Barbed wire";
+	static Name = "Barbed wire";
 	static description = "Auto-connects to nearby wires. Has little health.";
 	readonly visual = {ch:"#", fg:"#888"};
 

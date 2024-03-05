@@ -116,13 +116,13 @@ export default class Player extends Being {
 		let it = ITEMS.find(it => it.key == num);
 		if (!it) { return false; } // number does not exist
 
+		let name = it.ctor.Name;
+
 		let amount = this.getItem(it.id);
 		if (!amount) {
-			log.add(`You don't have any ${it.ctor.name}s.`);
+			log.add(`You don't have any ${name}s.`);
 			return false;
 		}
-
-		let name = it.ctor.name;
 
 		let direction = await waitForDirection(`Use ${name.article()}`);
 		if (!direction) { return false; }

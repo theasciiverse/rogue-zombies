@@ -6,10 +6,14 @@ import { ITEMS, ItemTemplate } from "../items/db.js"
 export default async function buy(player: Player) {
 	while (true) {
 		let dialog = new Dialog("Buy items");
-		dialog.addKey({id:"", key: "Escape"});
 
 		let table = buildItemTable(player, dialog);
-		dialog.append("Buy", table);
+		dialog.append(table);
+
+		let info = document.createElement("p");
+		info.innerHTML = "Earn money by killing zombies. Press <kbd>esc</kbd> to exit.";
+		dialog.addKey({id:"", key: "Escape"});
+		dialog.append(info);
 
 		let result = await dialog.show();
 
@@ -42,7 +46,7 @@ function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog) {
 	kbd.textContent = item.key;
 	row.insertCell().append(kbd);
 
-	row.insertCell().textContent = item?.ctor?.name;
+	row.insertCell().textContent = item.ctor.Name;
 
 	if (item.price > 0) {
 		let price = document.createElement("span");
@@ -53,7 +57,7 @@ function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog) {
 		row.insertCell().textContent = "-free-";
 	}
 
-	row.insertCell().textContent = item?.ctor?.description;
+	row.insertCell().textContent = item.ctor.description;
 
 	if (!disabled) {
 		dialog.addKey({id: item.id, code: `Numpad${item.key}`});

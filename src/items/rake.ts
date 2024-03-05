@@ -1,10 +1,11 @@
 import Item from "./item.js";
 import Being from "../beings/being.js";
 import * as log from "../log.js";
+import * as sfx from "../sfx.js";
 
 
 export default class Rake extends Item {
-	static name = "Rake";
+	static Name = "Rake";
 	static description = "Kills one zombie dumb enough to step on it.";
 	readonly visual = {ch:"]", fg:"#999"};
 
@@ -22,6 +23,7 @@ export default class Rake extends Item {
 	}
 
 	activate(being: Being) {
+		sfx.play("rake");
 		this.map.removeItem(this);
 		being.damage(this);
 	}

@@ -8,6 +8,11 @@ export default class Canvas extends Renderer {
 	protected ctx = this.node.getContext("2d")!;
 	protected tileSize: number[];
 
+	constructor() {
+		super();
+		this.node.className = "renderer canvas";
+	}
+
 	configure(tileCount: number[], tileSize: number[]) {
 		const { node, ctx } = this;
 

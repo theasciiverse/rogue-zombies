@@ -5,10 +5,10 @@ import Wire from "./wire.js";
 const COLORS = ["", "#008", "#33a", "#88f"];
 
 export default class Fence extends Wire {
-	static name = "Electric fence";
+	static Name = "Electric fence";
 	static description = "Auto-connects to nearby fences. Has more health.";
 	protected _hp = COLORS.length-1;
-	readonly visual = {ch:"~", fg:COLORS[this._hp]};
+	readonly visual = {ch:"≈", fg:COLORS[this._hp]};
 
 	damage(source: Entity) {
 		super.damage(source);
@@ -17,5 +17,4 @@ export default class Fence extends Wire {
 			this.map.changed(this);
 		}
 	}
-
 }
