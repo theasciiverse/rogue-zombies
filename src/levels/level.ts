@@ -6,12 +6,12 @@ import Renderer from "../renderer/renderer.js";
 import House from "../items/house.js";
 import * as log from "../log.js";
 import * as status from "../status.js";
+import * as metrics from "../metrics.js";
 import gameOver from "../dialogs/gameover.js";
 
 
 interface Config {
 	renderer: Renderer;
-	tileCount: number[];
 }
 
 export default class Level {
@@ -23,7 +23,7 @@ export default class Level {
 	readonly map: Map;
 
 	constructor(protected config: Config) {
-		let map = new Map(config.tileCount[0], config.tileCount[1], config.renderer);
+		let map = new Map(metrics.tileCount[0], metrics.tileCount[1], config.renderer);
 		this.map = map;
 
 		let zombies = new Zombies(this);

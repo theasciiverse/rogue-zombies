@@ -10,8 +10,9 @@ export default async function buy(player: Player) {
 		let table = buildItemTable(player, dialog);
 		dialog.append(table);
 
+		let canBuySomething = ITEMS.some(it => it.price <= player.money);
 		let info = document.createElement("p");
-		info.innerHTML = "Earn money by killing zombies. Press <kbd>esc</kbd> to exit.";
+		info.innerHTML = `${canBuySomething ? "Earn more money by killing zombies." : "You have no money! Earn some by killing zombies." } Press <kbd>esc</kbd> to exit.`;
 		dialog.addKey({id:"", key: "Escape"});
 		dialog.append(info);
 

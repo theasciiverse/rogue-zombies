@@ -82,13 +82,6 @@ export default class Player extends Being {
 			return false;
 		}
 
-		if (key.code == "KeyL") {
-			for (let i=0;i<10;i++) {
-				log.add(String(Math.random()));
-			}
-			return true;
-		}
-
 		return false;
 	}
 

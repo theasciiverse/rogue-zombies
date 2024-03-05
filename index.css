@@ -30,14 +30,27 @@ body {
 	background-color: black;
 	font-family: input;
 	height: 100dvh;
-	--color: #c0c0c0;
 	--dimmed: #888;
-	color: var(--color);
+	color: #c0c0c0;
 	margin: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
+
+a { color: white; }
+
+kbd {
+	font: inherit;
+	color: lime;
+	font-weight: bold;
+}
+kbd::before, kbd::after {
+	color: var(--dimmed);
+	font-weight: normal;
+}
+kbd::before { content: "["; }
+kbd::after { content: "]"; }
 
 .renderer.canvas, .renderer.dom {
 	width: calc(var(--tile-width) * var(--map-width));
@@ -66,11 +79,12 @@ body {
 
 .disabled, .disabled kbd {
 	color: var(--dimmed);
+	font-weight: normal;
 }
 
 dialog {
 	padding: 1em 1ch;
-	border: 2px solid var(--color);
+	border: 2px solid saddlebrown;
 	outline: none;
 	color: inherit;
 	background-color: inherit;
@@ -83,41 +97,24 @@ dialog::backdrop {
 }
 
 dialog h2 {
+	color: white;
 	margin: 0;
 	font-size: 100%;
 	text-align: center;
 }
-
+dialog h2::before, dialog h2::after { color: saddlebrown; }
 dialog h2::before { content: "--== "; }
 dialog h2::after { content: " ==--"; }
 
-table {
-	border-collapse: collapse;
-}
+dialog h2, dialog p, dialog table { margin: 0 0 1.3em 0; }
 
+table { border-collapse: collapse; }
 td { padding: 0; }
 th { text-align: left; }
-
 tbody td { padding-right: 2ch; }
 
 .money::after, .price::after { content: "$"; }
-
 tr:not(.disabled) .price { color: gold; }
-.disabled .price { color: red; }
-
-
-kbd {
-	font: inherit;
-	color: lime;
-	font-weight: bold;
-}
-
-kbd::before, kbd::after {
-	color: var(--dimmed);
-	font-weight: normal;
-}
-kbd::before { content: "["; }
-kbd::after { content: "]"; }
 
 #status, #log {
 	line-height: 1.25;

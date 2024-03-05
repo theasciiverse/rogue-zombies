@@ -1,9 +1,3 @@
-var __defProp = Object.defineProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-
 // src/prototype.ts
 Array.prototype.random = function() {
   const { length } = this;
@@ -24,82 +18,12 @@ String.prototype.article = function() {
   return `${a} ${this}`;
 };
 
-// src/entity.ts
-var Entity = class {
-  constructor(map) {
-    this.map = map;
-  }
-  _position;
-  _hp = 1;
-  get name() {
-    return "";
-  }
-  get position() {
-    return this._position;
-  }
-  set position(position) {
-    this._position = position;
-    this.map.changed(this);
-  }
-  damage(source) {
-    this._hp -= 1;
-    if (this._hp == 0) {
-      this.die(source);
-    }
-  }
-};
-
-// src/beings/being.ts
-var Being = class extends Entity {
-  die(source) {
-    const { map, position, visual } = this;
-    map.removeBeing(this);
-    map.setBackground(position[0], position[1], { ch: "%", fg: visual.fg });
-  }
-};
-
-// src/keyboard.ts
-function matchFilter(event, filter) {
-  if (!filter.length) {
-    return true;
-  }
-  return filter.some((f) => {
-    for (let p in f) {
-      return event[p] == f[p];
-    }
-  });
-}
-async function readKey(allowed = []) {
-  let ac = new AbortController();
-  let { signal } = ac;
-  return new Promise((resolve) => {
-    function onKeyDown(e) {
-      if (!matchFilter(e, allowed)) {
-        return;
-      }
-      ac.abort();
-      resolve(e);
-    }
-    window.addEventListener("keydown", onKeyDown, { signal });
-  });
-}
-
-// src/metrics.ts
-var metrics_exports = {};
-__export(metrics_exports, {
-  Renderer: () => Renderer2,
-  charWidth: () => charWidth,
-  init: () => init,
-  tileCount: () => tileCount,
-  tileSize: () => tileSize
-});
-
 // src/renderer/renderer.ts
 var Renderer = class {
   node;
-  static computeTileSize(tileCount3, area, aspectRatioRange) {
-    let w = Math.floor(area[0] / tileCount3[0]);
-    let h = Math.floor(area[1] / tileCount3[1]);
+  static computeTileSize(tileCount2, area, aspectRatioRange) {
+    let w = Math.floor(area[0] / tileCount2[0]);
+    let h = Math.floor(area[1] / tileCount2[1]);
     let ar = w / h;
     if (ar < aspectRatioRange[0]) {
       h = Math.floor(w / aspectRatioRange[0]);
@@ -120,10 +44,10 @@ var Canvas = class extends Renderer {
     super();
     this.node.className = "renderer canvas";
   }
-  configure(tileCount3, tileSize2) {
+  configure(tileCount2, tileSize2) {
     const { node: node3, ctx } = this;
-    node3.width = tileCount3[0] * tileSize2[0] * DPR;
-    node3.height = tileCount3[1] * tileSize2[1] * DPR;
+    node3.width = tileCount2[0] * tileSize2[0] * DPR;
+    node3.height = tileCount2[1] * tileSize2[1] * DPR;
     ctx.restore();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -203,9 +127,9 @@ var DOM = class extends Renderer {
 var Combo = class extends Renderer {
   node = document.createElement("div");
   renderers;
-  static computeTileSize(tileCount3, area, aspectRatioRange) {
+  static computeTileSize(tileCount2, area, aspectRatioRange) {
     let halfArea = [area[0] / 2, area[1]];
-    return super.computeTileSize(tileCount3, halfArea, aspectRatioRange);
+    return super.computeTileSize(tileCount2, halfArea, aspectRatioRange);
   }
   constructor() {
     super();
@@ -221,8 +145,8 @@ var Combo = class extends Renderer {
   remove(drawable) {
     this.renderers.forEach((r) => r.remove(drawable));
   }
-  configure(tileCount3, tileSize2) {
-    this.renderers.forEach((r) => r.configure(tileCount3, tileSize2));
+  configure(tileCount2, tileSize2) {
+    this.renderers.forEach((r) => r.configure(tileCount2, tileSize2));
   }
 };
 
@@ -270,6 +194,160 @@ function measureCharWidth() {
   span.remove();
   return rect.width;
 }
+
+// src/sfx.ts
+var DB = {
+  "zombie-spawn": 8,
+  "rake": 3,
+  "crowbar": 3,
+  "swoosh": 1,
+  "barricade": 3,
+  "wire": 3,
+  "fence": 2,
+  "bazooka": 1,
+  "mine": 1,
+  "game-over": 1
+};
+var audio = {};
+function init2() {
+  Object.entries(DB).forEach(([key, count]) => {
+    let list = [];
+    for (let i = 1; i <= count; i++) {
+      let a = new Audio(`sfx/${key}-${i}.mp3`);
+      a.load();
+      list.push(a);
+    }
+    audio[key] = list;
+  });
+}
+function play(what) {
+  audio[what].random().play();
+}
+
+// src/keyboard.ts
+function matchFilter(event, filter) {
+  if (!filter.length) {
+    return true;
+  }
+  return filter.some((f) => {
+    for (let p in f) {
+      return event[p] == f[p];
+    }
+  });
+}
+async function readKey(allowed = []) {
+  let ac = new AbortController();
+  let { signal } = ac;
+  return new Promise((resolve) => {
+    function onKeyDown(e) {
+      if (!matchFilter(e, allowed)) {
+        return;
+      }
+      ac.abort();
+      resolve(e);
+    }
+    window.addEventListener("keydown", onKeyDown, { signal });
+  });
+}
+
+// src/dialogs/dialog.ts
+var Dialog = class {
+  dialog = document.createElement("dialog");
+  resolve;
+  keys = [];
+  constructor(title) {
+    let h2 = document.createElement("h2");
+    h2.textContent = title;
+    this.append(h2);
+  }
+  append(...nodes) {
+    this.dialog.append(...nodes);
+  }
+  async show() {
+    const { dialog } = this;
+    document.body.append(dialog);
+    dialog.showModal();
+    while (true) {
+      let event = await readKey();
+      if (event.key == "Escape") {
+        event.preventDefault();
+      }
+      let id = this.matchKeyEvent(event);
+      if (id !== null) {
+        dialog.close();
+        dialog.remove();
+        return id;
+      }
+    }
+  }
+  addKey(key) {
+    this.keys.push(key);
+  }
+  matchKeyEvent(event) {
+    let key = this.keys.find((key2) => {
+      if ("key" in key2 && key2.key != event.key) {
+        return false;
+      }
+      if ("code" in key2 && key2.code != event.code) {
+        return false;
+      }
+      return true;
+    });
+    return key ? key.id : null;
+  }
+};
+
+// src/dialogs/welcome.ts
+function welcome() {
+  let dialog = new Dialog("Rogue Zombies");
+  let ps = HTML.map((html) => {
+    let p = document.createElement("p");
+    p.innerHTML = html;
+    return p;
+  });
+  dialog.append(...ps);
+  dialog.addKey({ id: "", code: "Space" });
+  return dialog.show();
+}
+var HTML = [
+  "Welcome! Hordes of zombies are drawing nearby, and you are the only one who can stop them. The time has come to arm yourself and prepare for the worst.",
+  `A bit of warning: this is a roguelike game created for the 2024 7DRL challenge. It may contain bugs, surprising UI/UX and possibly even a lutefisk. You can find more details at the <a href="https://github.com/ondras/roguezombies">game's GitHub repository</a>.`,
+  "Press <kbd>space</kbd> to start the game!"
+];
+
+// src/entity.ts
+var Entity = class {
+  constructor(map) {
+    this.map = map;
+  }
+  _position;
+  _hp = 1;
+  get name() {
+    return "";
+  }
+  get position() {
+    return this._position;
+  }
+  set position(position) {
+    this._position = position;
+    this.map.changed(this);
+  }
+  damage(source) {
+    this._hp -= 1;
+    if (this._hp == 0) {
+      this.die(source);
+    }
+  }
+};
+
+// src/beings/being.ts
+var Being = class extends Entity {
+  die(source) {
+    const { map, position, visual } = this;
+    map.removeBeing(this);
+    map.setBackground(position[0], position[1], { ch: "%", fg: visual.fg });
+  }
+};
 
 // src/log.ts
 var node = document.querySelector("#log");
@@ -355,35 +433,6 @@ var Item = class extends Entity {
     return true;
   }
 };
-
-// src/sfx.ts
-var DB = {
-  "zombie-spawn": 8,
-  "rake": 3,
-  "crowbar": 3,
-  "swoosh": 1,
-  "barricade": 3,
-  "wire": 3,
-  "fence": 2,
-  "bazooka": 1,
-  "mine": 1,
-  "game-over": 1
-};
-var audio = {};
-function init2() {
-  Object.entries(DB).forEach(([key, count]) => {
-    let list = [];
-    for (let i = 1; i <= count; i++) {
-      let a = new Audio(`sfx/${key}-${i}.mp3`);
-      a.load();
-      list.push(a);
-    }
-    audio[key] = list;
-  });
-}
-function play(what) {
-  audio[what].random().play();
-}
 
 // src/items/trap.ts
 var Trap = class extends Item {
@@ -804,64 +853,12 @@ var ITEMS = [{
 var ZOMBIE_MOVE_CHANCE = 0.5;
 var PLAYER_HP = 3;
 
-// src/dialogs/dialog.ts
-var Dialog = class {
-  dialog = document.createElement("dialog");
-  resolve;
-  keys = [];
-  constructor(title) {
-    let h2 = document.createElement("h2");
-    h2.textContent = title;
-    this.append(h2);
-  }
-  append(...nodes) {
-    this.dialog.append(...nodes);
-  }
-  async show() {
-    const { dialog } = this;
-    document.body.append(dialog);
-    dialog.showModal();
-    while (true) {
-      let event = await readKey();
-      if (event.key == "Escape") {
-        event.preventDefault();
-      }
-      let id = this.matchKeyEvent(event);
-      if (id !== null) {
-        dialog.close();
-        dialog.remove();
-        return id;
-      }
-    }
-  }
-  addKey(key) {
-    this.keys.push(key);
-  }
-  matchKeyEvent(event) {
-    let key = this.keys.find((key2) => {
-      if ("key" in key2 && key2.key != event.key) {
-        return false;
-      }
-      if ("code" in key2 && key2.code != event.code) {
-        return false;
-      }
-      return true;
-    });
-    return key ? key.id : null;
-  }
-};
-
 // src/dialogs/help.ts
 async function help() {
-  while (true) {
-    let dialog = new Dialog("Help!");
-    dialog.addKey({ id: "", key: "Escape" });
-    dialog.addKey({ id: "one", key: "1" });
-    let result = await dialog.show();
-    if (result == "") {
-      break;
-    }
-  }
+  let dialog = new Dialog("Help!");
+  dialog.addKey({ id: "", key: "Escape" });
+  dialog.addKey({ id: "one", key: "1" });
+  let result = await dialog.show();
 }
 
 // src/dialogs/buy.ts
@@ -870,8 +867,9 @@ async function buy(player) {
     let dialog = new Dialog("Buy items");
     let table = buildItemTable(player, dialog);
     dialog.append(table);
+    let canBuySomething = ITEMS.some((it) => it.price <= player.money);
     let info = document.createElement("p");
-    info.innerHTML = "Earn money by killing zombies. Press <kbd>esc</kbd> to exit.";
+    info.innerHTML = `${canBuySomething ? "Earn more money by killing zombies." : "You have no money! Earn some by killing zombies."} Press <kbd>esc</kbd> to exit.`;
     dialog.addKey({ id: "", key: "Escape" });
     dialog.append(info);
     let result = await dialog.show();
@@ -935,12 +933,12 @@ async function start() {
   dialog.addKey({ id: "", key: "Escape" });
   dialog.addKey({ id: "ok", code: "Space" });
   let info = document.createElement("p");
-  info.innerHTML = HTML;
+  info.innerHTML = HTML2;
   dialog.append(info);
   let result = await dialog.show();
   return result == "ok";
 }
-var HTML = `
+var HTML2 = `
 If you want to start the zombie invasion, press <kbd>space</kbd>.
 Zombies will slowly start spawning (you can still buy stuff).
 Otherwise, press <kbd>esc</kbd> to exit.
@@ -948,9 +946,9 @@ Otherwise, press <kbd>esc</kbd> to exit.
 
 // src/beings/player.ts
 var Player = class extends Being {
-  constructor(level2) {
-    super(level2.map);
-    this.level = level2;
+  constructor(level) {
+    super(level.map);
+    this.level = level;
   }
   visual = { ch: "@", fg: "red" };
   _hp = PLAYER_HP;
@@ -984,7 +982,7 @@ var Player = class extends Being {
     this.level.updateStatus();
   }
   async processKey(key) {
-    const { level: level2 } = this;
+    const { level } = this;
     clear();
     if (key.code in MOVEMENT) {
       let diff = MOVEMENT[key.code];
@@ -998,10 +996,10 @@ var Player = class extends Being {
       await buy(this);
       return false;
     }
-    if (key.key == "s" && level2.canBeStarted) {
+    if (key.key == "s" && level.canBeStarted) {
       let result = await start();
       if (result) {
-        level2.start();
+        level.start();
         return true;
       } else {
         return false;
@@ -1010,12 +1008,6 @@ var Player = class extends Being {
     if (key.key == "?") {
       await help();
       return false;
-    }
-    if (key.code == "KeyL") {
-      for (let i = 0; i < 10; i++) {
-        add(String(Math.random()));
-      }
-      return true;
     }
     return false;
   }
@@ -1106,18 +1098,18 @@ var MOVEMENT = {
 
 // src/zombies.ts
 var Zombies = class {
-  constructor(level2) {
-    this.level = level2;
+  constructor(level) {
+    this.level = level;
   }
   zombies = [];
   rounds = 0;
   spawnPotential = 1;
   async play() {
-    const { zombies, level: level2 } = this;
+    const { zombies, level } = this;
     this.rounds++;
     let activeZombies = zombies.filter((_) => Math.random() > ZOMBIE_MOVE_CHANCE);
     for (let i = 0; i < activeZombies.length; i++) {
-      await activeZombies[i].play(level2.player);
+      await activeZombies[i].play(level.player);
     }
     let spawnPotential = this.updateSpawnPotential();
     if (spawnPotential >= 1) {
@@ -1131,8 +1123,8 @@ var Zombies = class {
     this.zombies = this.zombies.filter((z) => z != zombie);
   }
   spawn(amount) {
-    const { zombies, level: level2 } = this;
-    const { map } = level2;
+    const { zombies, level } = this;
+    const { map } = level;
     play("zombie-spawn");
     let corners = getCorners(map);
     for (let i = 0; i < amount; i++) {
@@ -1193,10 +1185,10 @@ function bgColor(x, y) {
 
 // src/map.ts
 var Map2 = class {
-  constructor(width, height, renderer2) {
+  constructor(width, height, renderer) {
     this.width = width;
     this.height = height;
-    this.renderer = renderer2;
+    this.renderer = renderer;
     this.bg = new Background(width, height);
     window.addEventListener("metrics-change", () => this.onMetricsChange());
     this.onMetricsChange();
@@ -1314,8 +1306,8 @@ var House = class extends Item {
 // src/status.ts
 var node2 = document.querySelector("#status");
 var previousValues = {};
-function update(level2) {
-  const { player } = level2;
+function update(level) {
+  const { player } = level;
   let items = ITEMS.map((it) => buildItem(it, player));
   let status = [
     "Health: ",
@@ -1324,10 +1316,10 @@ function update(level2) {
     "Money: ",
     buildMoney(player.money)
   ];
-  if (level2.canBeStarted) {
+  if (level.canBeStarted) {
     status.push("  ", buildKey("S", "tart the invasion"));
   } else {
-    status.push("  ", "Score: ", buildScore(level2.score));
+    status.push("  ", "Score: ", buildScore(level.score));
   }
   status.push(
     "  ",
@@ -1414,7 +1406,7 @@ async function gameOver(score) {
 var Level = class {
   constructor(config) {
     this.config = config;
-    let map = new Map2(config.tileCount[0], config.tileCount[1], config.renderer);
+    let map = new Map2(tileCount[0], tileCount[1], config.renderer);
     this.map = map;
     let zombies = new Zombies(this);
     this.zombies = zombies;
@@ -1475,11 +1467,31 @@ var Level = class {
   }
 };
 
+// src/dialogs/levels.ts
+var MODES = [
+  { id: "tutorial", name: "Tutorial: basic controls and concepts", Ctor: Level }
+];
+async function pickLevel() {
+  let dialog = new Dialog("Game mode selection");
+  MODES.forEach((mode, i) => {
+    dialog.append(mode.name);
+    dialog.addKey({ id: mode.id, code: `Numpad${i + 1}` });
+    dialog.addKey({ id: mode.id, code: `Digit${i + 1}` });
+  });
+  let id = await dialog.show();
+  return MODES.find((mode) => mode.id == id).Ctor;
+}
+
 // src/index.ts
-await init([43, 30]);
-init2();
-var renderer = new Renderer2();
-document.querySelector("main").prepend(renderer.node);
-var { tileCount: tileCount2 } = metrics_exports;
-var level = new Level({ renderer, tileCount: tileCount2 });
-level.play();
+async function run() {
+  await init([43, 30]);
+  init2();
+  let renderer = new Renderer2();
+  document.querySelector("main").prepend(renderer.node);
+  await welcome();
+  while (true) {
+    let Ctor = await pickLevel();
+    await new Ctor({ renderer }).play();
+  }
+}
+run();
