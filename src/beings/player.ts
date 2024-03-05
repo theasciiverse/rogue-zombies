@@ -1,13 +1,14 @@
 import Entity from "../entity.js";
 import Being from "./being.js";
-import Map from "../map.js";
+import Level from "../levels/level.js";
 import { ITEMS } from "../items/db.js";
 import * as keyboard from "../keyboard.js";
 import * as rules from "../rules.js";
 import * as log from "../log.js";
-import * as status from "../status.js";
 import help from "../dialogs/help.js";
 import buy from "../dialogs/buy.js";
+import start from "../dialogs/start.js";
+import * as sfx from "../sfx.js";
 
 
 export default class Player extends Being {
@@ -16,18 +17,8 @@ export default class Player extends Being {
 	protected _money = 10;
 	readonly items = new window.Map<string, number>();
 
-	constructor(protected map: Map) {
-		super(map);
-		status.update(this);
-
-		this._hp--;
-		this.setItem("crowbar", Infinity);
-		this.setItem("rake", Infinity);
-		this.setItem("barricade", 3);
-		this.setItem("mine", Infinity);
-		this.setItem("bazooka", Infinity);
-		this.setItem("wire", Infinity);
-		this.setItem("fence", Infinity);
+	constructor(protected level: Level) {
+		super(level.map);
 	}
 
 	get hp() { return this._hp; }
@@ -48,16 +39,17 @@ export default class Player extends Being {
 
 	setItem(id: string, amount: number) {
 		this.items.set(id, amount);
-		status.update(this);
+		this.level.updateStatus();
 	}
 
 	get money() { return this._money; }
 	set money(money: number) {
 		this._money = money;
-		status.update(this);
+		this.level.updateStatus();
 	}
 
 	protected async processKey(key: KeyboardEvent) {
+		const { level } = this;
 		log.clear();
 
 		if (key.code in MOVEMENT) {
@@ -70,9 +62,19 @@ export default class Player extends Being {
 			return (num ? this.tryItem(num[0]) : false);
 		}
 
-		if (key.code == "KeyB") {
+		if (key.key == "b") {
 			await buy(this);
 			return false;
+		}
+
+		if (key.key == "s" && level.canBeStarted) {
+			let result = await start();
+			if (result) {
+				level.start();
+				return true;
+			} else {
+				return false;
+			}
 		}
 
 		if (key.key == "?") {
@@ -97,15 +99,22 @@ export default class Player extends Being {
 
 		if (!map.isPositionValid(x, y)) { return false; }
 
-		let blocker = map.getBlocker(x, y);
-		if (blocker) {
-			log.add(`${blocker.name.article().capitalize()} blocks the way.`);
-			return false;
+		let being = map.getBeing(x, y);
+		if (being) {
+			sfx.play("crowbar");
+			log.add(`You hit the ${being.name}.`);
+			being.damage(this);
+			return true;
 		}
 
 		let item = map.getItem(x, y);
 		if (item) {
-			log.add(`You carefully sidestep ${item.name.article()}.`);
+			if (item.blocks) {
+				log.add(`${item.name.article().capitalize()} blocks the way.`);
+				return false;
+			} else {
+				log.add(`You carefully sidestep ${item.name.article()}.`);
+			}
 		}
 
 		this.position = [x, y];
@@ -138,11 +147,12 @@ export default class Player extends Being {
 	damage(source: Entity) {
 		log.add(`${source.name.article().capitalize()} hits you!`);
 		super.damage(source);
-		status.update(this);
+		this.level.updateStatus();
 	}
 
 	die(source: Entity) {
 		super.die(source);
+		sfx.play("game-over");
 		log.add("You die...");
 	}
 }

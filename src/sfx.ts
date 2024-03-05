@@ -8,6 +8,7 @@ const DB = {
 	"fence": 2,
 	"bazooka": 1,
 	"mine": 1,
+	"game-over": 1
 }
 
 let audio: Record<keyof typeof DB, HTMLAudioElement[]> = {};

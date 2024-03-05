@@ -366,7 +366,8 @@ var DB = {
   "wire": 3,
   "fence": 2,
   "bazooka": 1,
-  "mine": 1
+  "mine": 1,
+  "game-over": 1
 };
 var audio = {};
 function init2() {
@@ -384,35 +385,35 @@ function play(what) {
   audio[what].random().play();
 }
 
-// src/items/crowbar.ts
-var Crowbar = class extends Item {
-  visual = {};
-  static Name = "Crowbar";
-  static description = "Melee range, unlimited uses. You already have this.";
+// src/items/trap.ts
+var Trap = class extends Item {
+  static Name = "Bear trap";
+  static description = "Kills several zombies dumb enough to step on it.";
+  visual = { ch: "0", fg: "#999" };
+  _hp = 3;
   use(position, direction) {
+    let ok = super.use(position, direction);
+    if (!ok) {
+      return false;
+    }
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
-    let being = this.map.getBeing(tx, ty);
-    let item = this.map.getItem(tx, ty);
-    if (being) {
-      play("crowbar");
-      add(`You hit the ${being.name}.`);
-      being.damage(this);
-    } else if (item) {
-      add(`You hit the ${item.name}.`);
-      item.damage(this);
-    } else {
-      play("swoosh");
-      add("You swing the crowbar in the empty space.");
-    }
+    this._position = [tx, ty];
+    this.map.addItem(this);
+    add("You set up a bear trap.");
     return true;
+  }
+  activate(being) {
+    play("rake");
+    this.damage(being);
+    being.damage(this);
   }
 };
 
 // src/items/barricade.ts
 var COLORS = ["", "#300", "#850", "#c90"];
 var Barricade = class extends Item {
-  static Name = "Wooden Barricade";
+  static Name = "Wooden barricade";
   static description = "Can hold them for some time.";
   blocks = true;
   _hp = COLORS.length - 1;
@@ -443,7 +444,7 @@ var Barricade = class extends Item {
 var Rake = class extends Item {
   static Name = "Rake";
   static description = "Kills one zombie dumb enough to step on it.";
-  visual = { ch: "]", fg: "#999" };
+  visual = { ch: "T", fg: "#999" };
   use(position, direction) {
     let ok = super.use(position, direction);
     if (!ok) {
@@ -648,6 +649,7 @@ var Bazooka = class extends Item {
   static description = "Flys in a straight line, explodes on impact.";
   async use(position, direction) {
     const { map, visual } = this;
+    play("swoosh");
     add("You launch a rocket...");
     let tx = position[0];
     let ty = position[1];
@@ -655,7 +657,6 @@ var Bazooka = class extends Item {
       tx += direction[0];
       ty += direction[1];
       if (!map.isPositionValid(tx, ty)) {
-        play("swoosh");
         add("it flies away.");
         break;
       }
@@ -752,24 +753,25 @@ var Fence = class extends Wire {
 
 // src/items/db.ts
 var ITEMS = [{
-  id: "crowbar",
-  key: "1",
-  price: 0,
-  amount: 0,
-  ctor: Crowbar
-}, {
   id: "barricade",
   short: "Barricade",
-  key: "2",
+  key: "1",
   price: 1,
   amount: 5,
   ctor: Barricade
 }, {
   id: "rake",
-  key: "3",
+  key: "2",
   price: 1,
   amount: 3,
   ctor: Rake
+}, {
+  id: "trap",
+  short: "Trap",
+  key: "3",
+  price: 2,
+  amount: 2,
+  ctor: Trap
 }, {
   id: "mine",
   key: "4",
@@ -801,62 +803,6 @@ var ITEMS = [{
 // src/rules.ts
 var ZOMBIE_MOVE_CHANCE = 0.5;
 var PLAYER_HP = 3;
-
-// src/status.ts
-var node2 = document.querySelector("#status");
-function update(player) {
-  let items = ITEMS.map((it) => buildItem(it, player));
-  let status = [
-    "Health: ",
-    buildHP(player.hp, PLAYER_HP),
-    "  ",
-    "Money: ",
-    buildMoney(player.money),
-    "  ",
-    buildKey("B", "uy items"),
-    "  ",
-    buildKey("S", "tart the invasion"),
-    "  ",
-    buildKey("?", "Help")
-  ];
-  node2.replaceChildren(...items, "\n", ...status);
-}
-function buildHP(curent, max) {
-  let node3 = document.createElement("span");
-  node3.className = "hp";
-  let str = "";
-  for (let i = 0; i < max; i++) {
-    str += i < curent ? "\u2665" : "\u2661";
-  }
-  node3.textContent = str;
-  return node3;
-}
-function buildMoney(money) {
-  let node3 = document.createElement("span");
-  node3.className = "money";
-  node3.textContent = String(money);
-  return node3;
-}
-function buildKey(key, text) {
-  let node3 = document.createElement("span");
-  let kbd = document.createElement("kbd");
-  kbd.textContent = key;
-  node3.append(kbd, text);
-  return node3;
-}
-function buildItem(it, player) {
-  let node3 = document.createElement("span");
-  node3.className = "item";
-  let count = player.getItem(it.id);
-  node3.classList.toggle("disabled", count == 0);
-  let kbd = document.createElement("kbd");
-  kbd.textContent = it.key;
-  let c = document.createElement("span");
-  c.className = "count";
-  c.textContent = count == Infinity ? "\u221E" : String(count);
-  node3.append(kbd, it.short || it.ctor.Name, c, "  ");
-  return node3;
-}
 
 // src/dialogs/dialog.ts
 var Dialog = class {
@@ -957,15 +903,13 @@ function buildItemRow(item, player, dialog) {
   kbd.textContent = item.key;
   row.insertCell().append(kbd);
   row.insertCell().textContent = item.ctor.Name;
-  if (item.price > 0) {
-    let price = document.createElement("span");
-    price.className = "price";
-    price.textContent = String(item.price);
-    row.insertCell().append(price, " for ", String(item.amount));
-  } else {
-    row.insertCell().textContent = "-free-";
-  }
+  let price = document.createElement("span");
+  price.className = "price";
+  price.textContent = String(item.price);
+  row.insertCell().append(price, " for ", String(item.amount));
   row.insertCell().textContent = item.ctor.description;
+  let count = player.getItem(item.id);
+  row.insertCell().textContent = count == Infinity ? "\u221E" : String(count);
   if (!disabled) {
     dialog.addKey({ id: item.id, code: `Numpad${item.key}` });
     dialog.addKey({ id: item.id, code: `Digit${item.key}` });
@@ -979,25 +923,34 @@ var TABLE = `
 		<th>Item</th>
 		<th>Price</th>
 		<th></th>
+		<th>Have</th>
 	</tr>
 </thead>
 <tbody></tbody>
 `;
 
+// src/dialogs/start.ts
+async function start() {
+  let dialog = new Dialog("Start the zombie invasion?");
+  dialog.addKey({ id: "", key: "Escape" });
+  dialog.addKey({ id: "ok", code: "Space" });
+  let info = document.createElement("p");
+  info.innerHTML = HTML;
+  dialog.append(info);
+  let result = await dialog.show();
+  return result == "ok";
+}
+var HTML = `
+If you want to start the zombie invasion, press <kbd>space</kbd>.
+Zombies will slowly start spawning (you can still buy stuff).
+Otherwise, press <kbd>esc</kbd> to exit.
+`;
+
 // src/beings/player.ts
 var Player = class extends Being {
-  constructor(map) {
-    super(map);
-    this.map = map;
-    update(this);
-    this._hp--;
-    this.setItem("crowbar", Infinity);
-    this.setItem("rake", Infinity);
-    this.setItem("barricade", 3);
-    this.setItem("mine", Infinity);
-    this.setItem("bazooka", Infinity);
-    this.setItem("wire", Infinity);
-    this.setItem("fence", Infinity);
+  constructor(level2) {
+    super(level2.map);
+    this.level = level2;
   }
   visual = { ch: "@", fg: "red" };
   _hp = PLAYER_HP;
@@ -1021,16 +974,17 @@ var Player = class extends Being {
   }
   setItem(id, amount) {
     this.items.set(id, amount);
-    update(this);
+    this.level.updateStatus();
   }
   get money() {
     return this._money;
   }
   set money(money) {
     this._money = money;
-    update(this);
+    this.level.updateStatus();
   }
   async processKey(key) {
+    const { level: level2 } = this;
     clear();
     if (key.code in MOVEMENT) {
       let diff = MOVEMENT[key.code];
@@ -1040,9 +994,18 @@ var Player = class extends Being {
       let num = key.code.match(/\d/);
       return num ? this.tryItem(num[0]) : false;
     }
-    if (key.code == "KeyB") {
+    if (key.key == "b") {
       await buy(this);
       return false;
+    }
+    if (key.key == "s" && level2.canBeStarted) {
+      let result = await start();
+      if (result) {
+        level2.start();
+        return true;
+      } else {
+        return false;
+      }
     }
     if (key.key == "?") {
       await help();
@@ -1063,14 +1026,21 @@ var Player = class extends Being {
     if (!map.isPositionValid(x, y)) {
       return false;
     }
-    let blocker = map.getBlocker(x, y);
-    if (blocker) {
-      add(`${blocker.name.article().capitalize()} blocks the way.`);
-      return false;
+    let being = map.getBeing(x, y);
+    if (being) {
+      play("crowbar");
+      add(`You hit the ${being.name}.`);
+      being.damage(this);
+      return true;
     }
     let item = map.getItem(x, y);
     if (item) {
-      add(`You carefully sidestep ${item.name.article()}.`);
+      if (item.blocks) {
+        add(`${item.name.article().capitalize()} blocks the way.`);
+        return false;
+      } else {
+        add(`You carefully sidestep ${item.name.article()}.`);
+      }
     }
     this.position = [x, y];
     return true;
@@ -1099,10 +1069,11 @@ var Player = class extends Being {
   damage(source) {
     add(`${source.name.article().capitalize()} hits you!`);
     super.damage(source);
-    update(this);
+    this.level.updateStatus();
   }
   die(source) {
     super.die(source);
+    play("game-over");
     add("You die...");
   }
 };
@@ -1135,19 +1106,18 @@ var MOVEMENT = {
 
 // src/zombies.ts
 var Zombies = class {
-  constructor(map, player) {
-    this.map = map;
-    this.player = player;
+  constructor(level2) {
+    this.level = level2;
   }
   zombies = [];
   rounds = 0;
   spawnPotential = 1;
   async play() {
-    const { zombies, player } = this;
+    const { zombies, level: level2 } = this;
     this.rounds++;
     let activeZombies = zombies.filter((_) => Math.random() > ZOMBIE_MOVE_CHANCE);
     for (let i = 0; i < activeZombies.length; i++) {
-      await activeZombies[i].play(player);
+      await activeZombies[i].play(level2.player);
     }
     let spawnPotential = this.updateSpawnPotential();
     if (spawnPotential >= 1) {
@@ -1157,11 +1127,12 @@ var Zombies = class {
     }
   }
   remove(zombie) {
-    this.player.money++;
+    this.level.increaseScore();
     this.zombies = this.zombies.filter((z) => z != zombie);
   }
   spawn(amount) {
-    const { zombies, map } = this;
+    const { zombies, level: level2 } = this;
+    const { map } = level2;
     play("zombie-spawn");
     let corners = getCorners(map);
     for (let i = 0; i < amount; i++) {
@@ -1340,12 +1311,121 @@ var House = class extends Item {
   }
 };
 
-// src/level.ts
+// src/status.ts
+var node2 = document.querySelector("#status");
+var previousValues = {};
+function update(level2) {
+  const { player } = level2;
+  let items = ITEMS.map((it) => buildItem(it, player));
+  let status = [
+    "Health: ",
+    buildHP(player.hp, PLAYER_HP),
+    "  ",
+    "Money: ",
+    buildMoney(player.money)
+  ];
+  if (level2.canBeStarted) {
+    status.push("  ", buildKey("S", "tart the invasion"));
+  } else {
+    status.push("  ", "Score: ", buildScore(level2.score));
+  }
+  status.push(
+    "  ",
+    buildKey("B", "uy items"),
+    "  ",
+    buildKey("?", "Help")
+  );
+  node2.replaceChildren(...items, "\n", ...status);
+}
+function buildHP(curent, max) {
+  let node3 = document.createElement("span");
+  node3.className = "hp";
+  let str = "";
+  for (let i = 0; i < max; i++) {
+    str += i < curent ? "\u2665" : "\u2661";
+  }
+  node3.textContent = str;
+  animateIfChanged(node3, curent);
+  return node3;
+}
+function buildMoney(money) {
+  let node3 = document.createElement("span");
+  node3.className = "money";
+  node3.textContent = String(money);
+  animateIfChanged(node3, money);
+  return node3;
+}
+function buildScore(score) {
+  let node3 = document.createElement("span");
+  node3.className = "score";
+  node3.textContent = String(score);
+  animateIfChanged(node3, score);
+  return node3;
+}
+function buildKey(key, text) {
+  let node3 = document.createElement("span");
+  let kbd = document.createElement("kbd");
+  kbd.textContent = key;
+  node3.append(kbd, text);
+  return node3;
+}
+function buildItem(it, player) {
+  let node3 = document.createElement("span");
+  let count = player.getItem(it.id);
+  node3.classList.toggle("disabled", count == 0);
+  let kbd = document.createElement("kbd");
+  kbd.textContent = it.key;
+  let c = document.createElement("span");
+  c.className = "count";
+  c.textContent = count == Infinity ? "\u221E" : String(count);
+  node3.append(kbd, it.short || it.ctor.Name, c, "  ");
+  return node3;
+}
+function animateIfChanged(node3, value) {
+  if (node3.className in previousValues) {
+    let previous = previousValues[node3.className];
+    if (previous != value) {
+      previousValues[node3.className] = value;
+      node3.animate(keyframes, timing);
+    }
+  } else {
+    previousValues[node3.className] = value;
+  }
+}
+var keyframes = {
+  transform: ["scale(1)", "scale(1.4)", "scale(1)"],
+  offset: [0, 0.1, 1]
+};
+var timing = {
+  duration: 600,
+  iterations: 1
+};
+
+// src/dialogs/gameover.ts
+async function gameOver(score) {
+  let dialog = new Dialog("Game over!");
+  dialog.append("Your score: ", String(score));
+  dialog.addKey({ id: "", key: "Escape" });
+  dialog.addKey({ id: "one", key: "1" });
+  await dialog.show();
+}
+
+// src/levels/level.ts
 var Level = class {
   constructor(config) {
     this.config = config;
     let map = new Map2(config.tileCount[0], config.tileCount[1], config.renderer);
-    let player = new Player(map);
+    this.map = map;
+    let zombies = new Zombies(this);
+    this.zombies = zombies;
+    let player = new Player(this);
+    this.player = player;
+    player.setItem("rake", Infinity);
+    player.setItem("barricade", 3);
+    player.setItem("mine", Infinity);
+    player.setItem("bazooka", Infinity);
+    player.setItem("wire", Infinity);
+    player.setItem("fence", Infinity);
     player.position = [15, 15];
     map.addBeing(player);
     [
@@ -1354,22 +1434,41 @@ var Level = class {
       new House(map, 12, 10),
       new House(map, 12, 11)
     ].forEach((h) => map.addItem(h));
-    let zombies = new Zombies(map, player);
-    this.map = map;
-    this.player = player;
-    this.zombies = zombies;
+    this.updateStatus();
   }
   player;
   zombies;
   renderer;
+  started = false;
+  _score = 0;
   map;
+  get canBeStarted() {
+    return !this.started;
+  }
+  start() {
+    this.started = true;
+    this.updateStatus();
+  }
+  updateStatus() {
+    update(this);
+  }
+  get score() {
+    return this._score;
+  }
+  increaseScore() {
+    this._score++;
+    this.player.money++;
+  }
   async play() {
     const { player, zombies } = this;
     while (!this.done) {
       await player.play();
-      await zombies.play();
+      if (this.started) {
+        await zombies.play();
+      }
       await flush();
     }
+    await gameOver(this.score);
   }
   get done() {
     return this.player.hp <= 0;
@@ -1377,7 +1476,7 @@ var Level = class {
 };
 
 // src/index.ts
-await init([45, 30]);
+await init([43, 30]);
 init2();
 var renderer = new Renderer2();
 document.querySelector("main").prepend(renderer.node);

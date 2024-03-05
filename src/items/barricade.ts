@@ -8,7 +8,7 @@ import * as sfx from "../sfx.js";
 const COLORS = ["", "#300", "#850", "#c90"];
 
 export default class Barricade extends Item {
-	static Name = "Wooden Barricade";
+	static Name = "Wooden barricade";
 	static description = "Can hold them for some time.";
 
 	readonly blocks = true;

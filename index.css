@@ -100,7 +100,8 @@ th { text-align: left; }
 
 tbody td { padding-right: 2ch; }
 
-.price::after { content: "$"; }
+.money::after, .price::after { content: "$"; }
+
 tr:not(.disabled) .price { color: gold; }
 .disabled .price { color: red; }
 
@@ -126,16 +127,14 @@ kbd::after { content: "]"; }
 	width: calc(var(--tile-width) * var(--map-width));
 }
 
-#status {
-	white-space: pre;
-}
+#status { white-space: pre; }
 
-#status .hp {
-	color: red;
-}
+#status span { display: inline-block; } /* aby se dal animovat */
 
+#status .hp { color: red; }
 #status .money { color: gold; }
-#status .money::after { content: "$"; }
+#status .score { color: lightskyblue; }
+
 #status .count::before {
 	content: "×";
 	opacity: 0.5;

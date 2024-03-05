@@ -12,6 +12,7 @@ export default class Bazooka extends Item {
 
 	async use(position: number[], direction: number[]) {
 		const { map, visual } = this;
+		sfx.play("swoosh");
 		log.add("You launch a rocket...");
 
 		let tx = position[0];
@@ -21,7 +22,6 @@ export default class Bazooka extends Item {
 			ty += direction[1];
 
 			if (!map.isPositionValid(tx, ty)) {
-				sfx.play("swoosh");
 				log.add("it flies away.");
 				break;
 			}

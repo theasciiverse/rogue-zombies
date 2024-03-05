@@ -7,7 +7,7 @@ import * as sfx from "../sfx.js";
 export default class Rake extends Item {
 	static Name = "Rake";
 	static description = "Kills one zombie dumb enough to step on it.";
-	readonly visual = {ch:"]", fg:"#999"};
+	readonly visual = {ch:"T", fg:"#999"};
 
 	use(position: number[], direction: number[]) {
 		let ok = super.use(position, direction);

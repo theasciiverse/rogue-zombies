@@ -1,10 +1,10 @@
 import "./prototype.js";
-import Level from "./level.js";
+import Level from "./levels/level.js";
 import * as metrics from "./metrics.js";
 import * as sfx from "./sfx.js";
 
 
-await metrics.init([45, 30]);
+await metrics.init([43, 30]);
 sfx.init();
 
 let renderer = new metrics.Renderer();

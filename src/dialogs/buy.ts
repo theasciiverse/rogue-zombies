@@ -48,16 +48,15 @@ function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog) {
 
 	row.insertCell().textContent = item.ctor.Name;
 
-	if (item.price > 0) {
-		let price = document.createElement("span");
-		price.className = "price";
-		price.textContent = String(item.price);
-		row.insertCell().append(price, " for ", String(item.amount));
-	} else {
-		row.insertCell().textContent = "-free-";
-	}
+	let price = document.createElement("span");
+	price.className = "price";
+	price.textContent = String(item.price);
+	row.insertCell().append(price, " for ", String(item.amount));
 
 	row.insertCell().textContent = item.ctor.description;
+
+	let count = player.getItem(item.id)
+	row.insertCell().textContent = (count == Infinity ? "∞" : String(count));
 
 	if (!disabled) {
 		dialog.addKey({id: item.id, code: `Numpad${item.key}`});
@@ -75,6 +74,7 @@ const TABLE = `
 		<th>Item</th>
 		<th>Price</th>
 		<th></th>
+		<th>Have</th>
 	</tr>
 </thead>
 <tbody></tbody>

@@ -1,6 +1,6 @@
-import Player from "./beings/player.js";
 import Zombie from "./beings/zombie.js";
 import Map from "./map.js";
+import Level from "./levels/level.js";
 import * as rules from "./rules.js";
 import * as sfx from "./sfx.js";
 
@@ -10,17 +10,17 @@ export default class Zombies {
 	protected rounds = 0;
 	protected spawnPotential = 1;
 
-	constructor(protected map: Map, protected player: Player) {
+	constructor(protected level: Level) {
 	}
 
 	async play() {
-		const { zombies, player } = this;
+		const { zombies, level } = this;
 		this.rounds++;
 
 		let activeZombies = zombies.filter(_ => Math.random() > rules.ZOMBIE_MOVE_CHANCE);
 		// FIXME: sort podle vzdalenosti od hrace
 		for (let i=0; i<activeZombies.length;i++) {
-			await activeZombies[i].play(player);
+			await activeZombies[i].play(level.player);
 		}
 
 		let spawnPotential = this.updateSpawnPotential();
@@ -32,12 +32,14 @@ export default class Zombies {
 	}
 
 	remove(zombie: Zombie) {
-		this.player.money++;
+		this.level.increaseScore();
 		this.zombies = this.zombies.filter(z => z != zombie);
 	}
 
 	protected spawn(amount: number) {
-		const { zombies, map } = this;
+		const { zombies, level } = this;
+		const { map } = level;
+
 		sfx.play("zombie-spawn");
 
 		let corners = getCorners(map);
