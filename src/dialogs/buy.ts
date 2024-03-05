@@ -50,7 +50,7 @@ function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog) {
 	row.insertCell().textContent = item.ctor.Name;
 
 	let price = document.createElement("span");
-	price.className = "price";
+	price.className = "money";
 	price.textContent = String(item.price);
 	row.insertCell().append(price, " for ", String(item.amount));
 

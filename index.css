@@ -75,9 +75,10 @@ kbd::after { content: "]"; }
 
 .renderer.combo {
 	display: flex;
+	gap: var(--tile-width);
 }
 
-.disabled, .disabled kbd {
+.disabled, .disabled kbd, .disabled .money {
 	color: var(--dimmed);
 	font-weight: normal;
 }
@@ -90,6 +91,7 @@ dialog {
 	background-color: inherit;
 	font-size: 15px;
 	line-height: 1.3;
+	max-width: 75vw;
 }
 
 dialog::backdrop {
@@ -102,7 +104,7 @@ dialog h2 {
 	font-size: 100%;
 	text-align: center;
 }
-dialog h2::before, dialog h2::after { color: saddlebrown; }
+dialog h2::before, dialog h2::after { color: goldenrod; }
 dialog h2::before { content: "--== "; }
 dialog h2::after { content: " ==--"; }
 
@@ -112,9 +114,8 @@ table { border-collapse: collapse; }
 td { padding: 0; }
 th { text-align: left; }
 tbody td { padding-right: 2ch; }
+td:has(.money) { white-space: nowrap; }
 
-.money::after, .price::after { content: "$"; }
-tr:not(.disabled) .price { color: gold; }
 
 #status, #log {
 	line-height: 1.25;
@@ -128,9 +129,10 @@ tr:not(.disabled) .price { color: gold; }
 
 #status span { display: inline-block; } /* aby se dal animovat */
 
-#status .hp { color: red; }
-#status .money { color: gold; }
-#status .score { color: lightskyblue; }
+.hp { color: red; }
+.money { color: gold; }
+.money::after { content: "$"; }
+.score { color: dodgerblue; }
 
 #status .count::before {
 	content: "×";

@@ -129,7 +129,8 @@ var Combo = class extends Renderer {
   renderers;
   static computeTileSize(tileCount2, area, aspectRatioRange) {
     let halfArea = [area[0] / 2, area[1]];
-    return super.computeTileSize(tileCount2, halfArea, aspectRatioRange);
+    let fakeTileCount = [tileCount2[0] * 2 + 1, tileCount2[1]];
+    return super.computeTileSize(fakeTileCount, area, aspectRatioRange);
   }
   constructor() {
     super();
@@ -267,6 +268,7 @@ var Dialog = class {
     const { dialog } = this;
     document.body.append(dialog);
     dialog.showModal();
+    document.activeElement && document.activeElement.blur();
     while (true) {
       let event = await readKey();
       if (event.key == "Escape") {
@@ -300,20 +302,23 @@ var Dialog = class {
 // src/dialogs/welcome.ts
 function welcome() {
   let dialog = new Dialog("Rogue Zombies");
-  let ps = HTML.map((html) => {
-    let p = document.createElement("p");
-    p.innerHTML = html;
-    return p;
-  });
-  dialog.append(...ps);
+  let node3 = document.createElement("div");
+  node3.innerHTML = HTML;
+  dialog.append(...node3.childNodes);
   dialog.addKey({ id: "", code: "Space" });
   return dialog.show();
 }
-var HTML = [
-  "Welcome! Hordes of zombies are drawing nearby, and you are the only one who can stop them. The time has come to arm yourself and prepare for the worst.",
-  `A bit of warning: this is a roguelike game created for the 2024 7DRL challenge. It may contain bugs, surprising UI/UX and possibly even a lutefisk. You can find more details at the <a href="https://github.com/ondras/roguezombies">game's GitHub repository</a>.`,
-  "Press <kbd>space</kbd> to start the game!"
-];
+var HTML = `
+	<p>Welcome! Hordes of zombies are drawing nearby, and you are the only one who can stop them. The time has come to arm yourself and prepare for the worst.</p>
+	<p>A bit of warning: this is a roguelike game created for the 2024 7DRL challenge. It may contain bugs, surprising UI/UX and possibly even a lutefisk. You can find more details at the <a href="https://github.com/ondras/roguezombies">game's GitHub repository</a>.</p>
+	<p>Recommendations:</p>
+	<ul>
+		<li>browser window size of at least 800\xD7600 pixels</li>
+		<li>audio on (game uses sound effects)</li>
+		<li>background music (<a href="https://www.youtube.com/playlist?list=PLGC-s5wU_PFRiFxj0oAcjX-irpNnuE8dH">suitable YouTube playlist</a>)</li>
+	</ul>
+	<p>Press <kbd>space</kbd> to start the game!</p>
+`;
 
 // src/entity.ts
 var Entity = class {
@@ -337,15 +342,6 @@ var Entity = class {
     if (this._hp == 0) {
       this.die(source);
     }
-  }
-};
-
-// src/beings/being.ts
-var Being = class extends Entity {
-  die(source) {
-    const { map, position, visual } = this;
-    map.removeBeing(this);
-    map.setBackground(position[0], position[1], { ch: "%", fg: visual.fg });
   }
 };
 
@@ -427,10 +423,43 @@ var Item = class extends Entity {
     }
     let item = map.getItem(tx, ty);
     if (item) {
-      add(`Cannot use ${this.name}: ${item.name.article()} is lying there!`);
-      return false;
+      if (item instanceof Corpse) {
+        map.removeItem(item);
+        return true;
+      } else {
+        add(`Cannot use ${this.name}: ${item.name.article()} is lying there!`);
+        return false;
+      }
     }
     return true;
+  }
+};
+
+// src/items/corpse.ts
+var Corpse = class extends Item {
+  visual = { ch: "%", fg: "" };
+  _name;
+  constructor(map, being) {
+    super(map);
+    this.visual.fg = being.visual.fg;
+    this._position = being.position;
+    this._name = `${being.name} corpse`;
+  }
+  get name() {
+    return this._name;
+  }
+};
+
+// src/beings/being.ts
+var Being = class extends Entity {
+  die(source) {
+    const { map } = this;
+    map.removeBeing(this);
+    let existing = map.getItem(this.position[0], this.position[1]);
+    if (!existing) {
+      let corpse = new Corpse(map, this);
+      map.addItem(corpse);
+    }
   }
 };
 
@@ -532,10 +561,16 @@ var Zombie = class extends Being {
   constructor(map, zombies) {
     super(map);
     this.zombies = zombies;
+    if (Math.random() < 0.01) {
+      this._name = "zombie lutefisk";
+    } else {
+      this._name = this.visual.ch == "z" ? "zombie" : "large zombie";
+    }
   }
   visual = { ch: CHARS.random(), fg: COLORS2.random() };
+  _name;
   get name() {
-    return this.visual.ch == "z" ? "zombie" : "large zombie";
+    return this._name;
   }
   async play(player) {
     const { position } = this;
@@ -654,8 +689,13 @@ function drawExplosions(map, positions, fraction) {
 }
 async function explode(map, position, radius, source) {
   let positions = gatherPositions(map, position, radius);
-  let zombies = extractZombies(positions, map);
-  let promises = zombies.map((z) => z.damage(source));
+  extractZombies(positions, map).forEach((z) => z.damage(source));
+  positions.forEach((pos) => {
+    let item = map.getItem(pos[0], pos[1]);
+    if (item instanceof Corpse) {
+      map.removeItem(item);
+    }
+  });
   let duration = 400;
   let step = 30;
   for (let i = 0; i < duration; i += step) {
@@ -663,7 +703,6 @@ async function explode(map, position, radius, source) {
     await sleep(step);
   }
   positions.forEach((pos) => map.setFX(pos[0], pos[1], null));
-  await Promise.all(promises);
 }
 
 // src/items/mine.ts
@@ -768,6 +807,9 @@ function tryConnection(position, direction, map, Ctor) {
     }
     let item = map.getItem(x, y);
     if (item) {
+      if (item instanceof Corpse) {
+        continue;
+      }
       if (item instanceof Ctor) {
         amount = i - 1;
       }
@@ -777,6 +819,8 @@ function tryConnection(position, direction, map, Ctor) {
   for (let i = 1; i <= amount; i++) {
     let x = position[0] + i * direction[0];
     let y = position[1] + i * direction[1];
+    let corpse = map.getItem(x, y);
+    corpse && map.removeItem(corpse);
     let item = new Ctor(map);
     item.position = [x, y];
     map.addItem(item);
@@ -902,7 +946,7 @@ function buildItemRow(item, player, dialog) {
   row.insertCell().append(kbd);
   row.insertCell().textContent = item.ctor.Name;
   let price = document.createElement("span");
-  price.className = "price";
+  price.className = "money";
   price.textContent = String(item.price);
   row.insertCell().append(price, " for ", String(item.amount));
   row.insertCell().textContent = item.ctor.description;
@@ -1385,7 +1429,7 @@ function animateIfChanged(node3, value) {
   }
 }
 var keyframes = {
-  transform: ["scale(1)", "scale(1.4)", "scale(1)"],
+  transform: ["scale(1)", "scale(1.6)", "scale(1)"],
   offset: [0, 0.1, 1]
 };
 var timing = {
@@ -1396,9 +1440,14 @@ var timing = {
 // src/dialogs/gameover.ts
 async function gameOver(score) {
   let dialog = new Dialog("Game over!");
-  dialog.append("Your score: ", String(score));
-  dialog.addKey({ id: "", key: "Escape" });
-  dialog.addKey({ id: "one", key: "1" });
+  let p1 = document.createElement("p");
+  p1.innerHTML = "Game over! The zombies have eaten your brains.";
+  let p2 = document.createElement("p");
+  p2.innerHTML = `Your score: <span class="score">${score}</span>`;
+  let p3 = document.createElement("p");
+  p3.innerHTML = `Press <kbd>space</kbd> to return to the main menu.`;
+  dialog.append(p1, p2, p3);
+  dialog.addKey({ id: "", code: "Space" });
   await dialog.show();
 }
 

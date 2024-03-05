@@ -26,6 +26,7 @@ export default class Dialog {
 		const { dialog } = this;
 		document.body.append(dialog)
 		dialog.showModal();
+		document.activeElement && document.activeElement.blur();
 
 		while (true) {
 			let event = await keyboard.readKey();

@@ -104,7 +104,7 @@ function animateIfChanged(node: HTMLElement, value: number) {
 
 
 const keyframes = {
-	transform: ["scale(1)", "scale(1.4)", "scale(1)"],
+	transform: ["scale(1)", "scale(1.6)", "scale(1)"],
 	offset: [0, 0.1, 1]
 }
 

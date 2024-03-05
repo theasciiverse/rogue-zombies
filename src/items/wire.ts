@@ -1,4 +1,5 @@
 import Item from "./item.js";
+import Corpse from "./corpse.js";
 import Player from "../beings/player.js";
 import Being from "../beings/being.js";
 import Map from "../map.js";
@@ -52,6 +53,7 @@ function tryConnection(position: number[], direction: number[], map: Map, Ctor: 
 
 		let item = map.getItem(x, y);
 		if (item) {
+			if (item instanceof Corpse) { continue; } // we remove them in the process
 			if (item instanceof Ctor) { amount = i-1; }
 			break;
 		}
@@ -60,6 +62,10 @@ function tryConnection(position: number[], direction: number[], map: Map, Ctor: 
 	for (let i=1;i<=amount;i++) {
 		let x = position[0] + i*direction[0];
 		let y = position[1] + i*direction[1];
+
+		let corpse = map.getItem(x, y);
+		corpse && map.removeItem(corpse);
+
 		let item = new Ctor(map);
 		item.position = [x, y];
 		map.addItem(item);

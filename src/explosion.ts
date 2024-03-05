@@ -1,5 +1,6 @@
 import Map from "./map.js";
 import Item from "./items/item.js";
+import Corpse from "./items/corpse.js";
 import Zombie from "./beings/zombie.js";
 
 
@@ -43,9 +44,13 @@ function drawExplosions(map: Map, positions: number[][], fraction: number) {
 export async function explode(map: Map, position: number[], radius: number, source: Item) {
 	let positions = gatherPositions(map, position, radius);
 
-	// kill zombies FIXME remove corpses? how?
-	let zombies = extractZombies(positions, map)
-	let promises = zombies.map(z => z.damage(source));
+	extractZombies(positions, map).forEach(z => z.damage(source));
+
+	// remove corpses
+	positions.forEach(pos => {
+		let item = map.getItem(pos[0], pos[1]);
+		if (item instanceof Corpse) { map.removeItem(item); }
+	});
 
 	// animate explosion
 	let duration = 400;
@@ -56,9 +61,6 @@ export async function explode(map: Map, position: number[], radius: number, sour
 	}
 
 	positions.forEach(pos => map.setFX(pos[0], pos[1], null));
-
-	// wait for potential damage info
-	await Promise.all(promises);
 }
 
 /*

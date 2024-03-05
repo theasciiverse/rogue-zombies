@@ -9,7 +9,8 @@ export default class Combo extends Renderer {
 
 	static computeTileSize(tileCount: number[], area: number[], aspectRatioRange: number[]) {
 		let halfArea = [area[0]/2, area[1]];
-		return super.computeTileSize(tileCount, halfArea, aspectRatioRange);
+		let fakeTileCount = [tileCount[0]*2+1, tileCount[1]];
+		return super.computeTileSize(fakeTileCount, area, aspectRatioRange);
 	}
 
 	constructor() {

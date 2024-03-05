@@ -1,4 +1,5 @@
 import Being from "../beings/being.js";
+import Corpse from "./corpse.js";
 import Entity from "../entity.js";
 import * as log from "../log.js";
 
@@ -27,8 +28,13 @@ export default abstract class Item extends Entity {
 
 		let item = map.getItem(tx, ty);
 		if (item) {
-			log.add(`Cannot use ${this.name}: ${item.name.article()} is lying there!`);
-			return false;
+			if (item instanceof Corpse) {
+				map.removeItem(item);
+				return true;
+			} else {
+				log.add(`Cannot use ${this.name}: ${item.name.article()} is lying there!`);
+				return false;
+			}
 		}
 
 		return true;

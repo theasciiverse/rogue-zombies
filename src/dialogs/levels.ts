@@ -2,8 +2,8 @@
 
 Tutorial: basic controls and concepts
 Home defense: regular run
-???: ???
-Sandbox: unlimited resources
+Reinforcements: survive for a limited number of rounds
+Sandbox: unlimited resources, unlimited carnage
 
 */
 
@@ -13,7 +13,6 @@ import Level from "../levels/level.js";
 const MODES = [
 	{ id: "tutorial", name: "Tutorial: basic controls and concepts", Ctor: Level },
 ]
-
 
 export default async function pickLevel() {
 	let dialog = new Dialog("Game mode selection");

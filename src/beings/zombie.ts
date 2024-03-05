@@ -18,12 +18,18 @@ type MovementResult = InvalidResult | PlayerResult | MoveResult | ItemResult;
 
 export default class Zombie extends Being {
 	readonly visual = {ch:CHARS.random(), fg:COLORS.random()};
+	protected _name: string;
 
 	constructor(map: Map, protected zombies: Zombies) {
 		super(map);
+		if (Math.random() < 0.01) {
+			this._name = "zombie lutefisk";
+		} else {
+			this._name = (this.visual.ch == "z"? "zombie" : "large zombie");
+		}
 	}
 
-	get name() { return (this.visual.ch == "z"? "zombie" : "large zombie"); }
+	get name() { return this._name; }
 
 	async play(player: Being) {
 		const { position } = this;
