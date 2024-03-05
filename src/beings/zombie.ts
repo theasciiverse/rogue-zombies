@@ -3,6 +3,7 @@ import Being from "./being.js";
 import Item from "../items/item.js";
 import Zombies from "../zombies.js";
 import Map from "../map.js";
+import DIRS from "../dirs.js"
 
 
 const CHARS = ["z", "Z"];
@@ -101,14 +102,3 @@ function distance(pos1: number[], pos2: number[]) {
 	var dy = Math.abs(pos1[1]-pos2[1]);
 	return Math.max(dx, dy);
 }
-
-const DIRS = [
-	[ 0, -1],
-	[ 1, -1],
-	[ 1,  0],
-	[ 1,  1],
-	[ 0,  1],
-	[-1,  1],
-	[-1,  0],
-	[-1, -1]
-];

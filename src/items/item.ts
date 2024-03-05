@@ -10,9 +10,9 @@ export default abstract class Item extends Entity {
 	readonly blocks: boolean = false;
 
 	get name() { return this.constructor.name; }
-	async activate(being: Being) {} // stepped on something
-
 	die(source: Entity) { this.map.removeItem(this); }
+
+	activate(being: Being): void | Promise<void> {} // stepped on something
 	use(position: number[], direction: number[]): boolean | Promise<boolean> { // use from inventory
 		const { map } = this;
 
@@ -21,7 +21,13 @@ export default abstract class Item extends Entity {
 		let blocker = map.getBlocker(tx, ty);
 
 		if (blocker) {
-			log.add(`Cannot use ${this.name}: ${blocker.name.article()} is there!`);
+			log.add(`Cannot use ${this.name}: ${blocker.name.article()} is standing there!`);
+			return false;
+		}
+
+		let item = map.getItem(tx, ty);
+		if (item) {
+			log.add(`Cannot use ${this.name}: ${item.name.article()} is lying there!`);
 			return false;
 		}
 

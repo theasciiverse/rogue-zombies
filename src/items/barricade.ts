@@ -11,8 +11,8 @@ export default class Barricade extends Item {
 	static description = "Can hold them for some time.";
 
 	readonly blocks = true;
-	readonly visual = { ch: "#", fg: "" };
 	protected _hp = COLORS.length-1;
+	readonly visual = { ch: "#", fg: COLORS[COLORS.length-1] };
 
 	damage(source: Entity) {
 		super.damage(source);
@@ -29,7 +29,7 @@ export default class Barricade extends Item {
 		let tx = position[0] + direction[0];
 		let ty = position[1] + direction[1];
 		this._position = [tx, ty];
-		this.map.addItem(this); // fixme pridat vickrat
+		this.map.addItem(this);
 		log.add("You build a barricade.");
 
 		return true;

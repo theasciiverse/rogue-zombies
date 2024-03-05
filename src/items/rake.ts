@@ -21,8 +21,8 @@ export default class Rake extends Item {
 		return true;
 	}
 
-	async activate(being: Being) {
+	activate(being: Being) {
 		this.map.removeItem(this);
-		await being.damage(this);
+		being.damage(this);
 	}
 }

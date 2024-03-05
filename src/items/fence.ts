@@ -1,21 +1,21 @@
-import Item from "./item.js";
-import * as log from "../log.js";
+import Entity from "../entity.js";
+import Wire from "./wire.js";
 
 
-export default class Fence extends Item {
+const COLORS = ["", "#008", "#33a", "#88f"];
+
+export default class Fence extends Wire {
 	static name = "Electric fence";
 	static description = "Auto-connects to nearby fences. Has more health.";
+	protected _hp = COLORS.length-1;
+	readonly visual = {ch:"~", fg:COLORS[this._hp]};
 
-	use(position: number[], direction: number[]) {
-		let tx = position[0] + direction[0];
-		let ty = position[1] + direction[1];
-		let being = this.map.getBeing(tx, ty);
-
-		if (being) {
-			log.add(`You hit the ${being.name}.`);
-			being.damage(this);
-		} else {
-			log.add("You swing the crowbar in the empty space.");
+	damage(source: Entity) {
+		super.damage(source);
+		if (this._hp > 0) {
+			this.visual.fg = COLORS[this._hp];
+			this.map.changed(this);
 		}
 	}
+
 }

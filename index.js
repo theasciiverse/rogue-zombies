@@ -328,19 +328,24 @@ var Item = class extends Entity {
   get name() {
     return this.constructor.name;
   }
-  async activate(being) {
-  }
-  // stepped on something
   die(source) {
     this.map.removeItem(this);
   }
+  activate(being) {
+  }
+  // stepped on something
   use(position, direction) {
     const { map } = this;
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
     let blocker = map.getBlocker(tx, ty);
     if (blocker) {
-      add(`Cannot use ${this.name}: ${blocker.name.article()} is there!`);
+      add(`Cannot use ${this.name}: ${blocker.name.article()} is standing there!`);
+      return false;
+    }
+    let item = map.getItem(tx, ty);
+    if (item) {
+      add(`Cannot use ${this.name}: ${item.name.article()} is lying there!`);
       return false;
     }
     return true;
@@ -376,8 +381,8 @@ var Barricade = class extends Item {
   static name = "Wooden Barricade";
   static description = "Can hold them for some time.";
   blocks = true;
-  visual = { ch: "#", fg: "" };
   _hp = COLORS.length - 1;
+  visual = { ch: "#", fg: COLORS[COLORS.length - 1] };
   damage(source) {
     super.damage(source);
     if (this._hp > 0) {
@@ -416,11 +421,23 @@ var Rake = class extends Item {
     add("You set up a rake.");
     return true;
   }
-  async activate(being) {
+  activate(being) {
     this.map.removeItem(this);
-    await being.damage(this);
+    being.damage(this);
   }
 };
+
+// src/dirs.ts
+var dirs_default = [
+  [0, -1],
+  [1, -1],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [-1, 1],
+  [-1, 0],
+  [-1, -1]
+];
 
 // src/beings/zombie.ts
 var CHARS = ["z", "Z"];
@@ -436,7 +453,7 @@ var Zombie = class extends Being {
   }
   async play(player) {
     const { position } = this;
-    let results = DIRS.map((dir) => {
+    let results = dirs_default.map((dir) => {
       let x = position[0] + dir[0];
       let y = position[1] + dir[1];
       return this.getMovementResult(x, y, player);
@@ -513,16 +530,6 @@ function distance(pos1, pos2) {
   var dy = Math.abs(pos1[1] - pos2[1]);
   return Math.max(dx, dy);
 }
-var DIRS = [
-  [0, -1],
-  [1, -1],
-  [1, 0],
-  [1, 1],
-  [0, 1],
-  [-1, 1],
-  [-1, 0],
-  [-1, -1]
-];
 
 // src/explosion.ts
 function sleep(ms) {
@@ -633,35 +640,70 @@ function sleep2(ms) {
 }
 
 // src/items/wire.ts
+var CONNECTION_DISTANCE = 3;
 var Wire = class extends Item {
   static name = "Barbed wire";
   static description = "Auto-connects to nearby wires. Has little health.";
+  visual = { ch: "#", fg: "#888" };
+  activate(being) {
+    this.damage(being);
+    being.damage(this);
+  }
   use(position, direction) {
+    let ok = super.use(position, direction);
+    if (!ok) {
+      return false;
+    }
+    const { map } = this;
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
-    let being = this.map.getBeing(tx, ty);
-    if (being) {
-      add(`You hit the ${being.name}.`);
-      being.damage(this);
-    } else {
-      add("You swing the crowbar in the empty space.");
-    }
+    this._position = [tx, ty];
+    map.addItem(this);
+    let Ctor = this.constructor;
+    dirs_default.forEach((dir) => {
+      tryConnection([tx, ty], dir, map, Ctor);
+    });
+    add("You build a barbed wire segment.");
   }
 };
+function tryConnection(position, direction, map, Ctor) {
+  let amount = 0;
+  for (let i = 1; i < CONNECTION_DISTANCE; i++) {
+    let x = position[0] + i * direction[0];
+    let y = position[1] + i * direction[1];
+    let blocker = map.getBlocker(x, y);
+    if (blocker && !(blocker instanceof Player)) {
+      break;
+    }
+    let item = map.getItem(x, y);
+    if (item) {
+      if (item instanceof Ctor) {
+        amount = i - 1;
+      }
+      break;
+    }
+  }
+  for (let i = 1; i <= amount; i++) {
+    let x = position[0] + i * direction[0];
+    let y = position[1] + i * direction[1];
+    let item = new Ctor(map);
+    item.position = [x, y];
+    map.addItem(item);
+  }
+}
 
 // src/items/fence.ts
-var Fence = class extends Item {
+var COLORS3 = ["", "#008", "#33a", "#88f"];
+var Fence = class extends Wire {
   static name = "Electric fence";
   static description = "Auto-connects to nearby fences. Has more health.";
-  use(position, direction) {
-    let tx = position[0] + direction[0];
-    let ty = position[1] + direction[1];
-    let being = this.map.getBeing(tx, ty);
-    if (being) {
-      add(`You hit the ${being.name}.`);
-      being.damage(this);
-    } else {
-      add("You swing the crowbar in the empty space.");
+  _hp = COLORS3.length - 1;
+  visual = { ch: "~", fg: COLORS3[this._hp] };
+  damage(source) {
+    super.damage(source);
+    if (this._hp > 0) {
+      this.visual.fg = COLORS3[this._hp];
+      this.map.changed(this);
     }
   }
 };
