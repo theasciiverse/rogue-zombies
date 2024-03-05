@@ -2,6 +2,7 @@ import Item from "./item.js";
 import Being from "../beings/being.js";
 import * as log from "../log.js";
 import { explode } from "../explosion.js";
+import * as sfx from "../sfx.js";
 
 
 export default class Mine extends Item {
@@ -25,6 +26,7 @@ export default class Mine extends Item {
 	async activate(being: Being) {
 		const { map, position } = this;
 		map.removeItem(this);
+		sfx.play("mine");
 		await explode(map, position, 3, this);
 	}
 }

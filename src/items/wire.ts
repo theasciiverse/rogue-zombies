@@ -3,6 +3,7 @@ import Player from "../beings/player.js";
 import Being from "../beings/being.js";
 import Map from "../map.js";
 import * as log from "../log.js";
+import * as sfx from "../sfx.js";
 import DIRS from "../dirs.js";
 
 
@@ -12,8 +13,10 @@ export default class Wire extends Item {
 	static Name = "Barbed wire";
 	static description = "Auto-connects to nearby wires. Has little health.";
 	readonly visual = {ch:"#", fg:"#888"};
+	protected sound: Parameters<typeof sfx.play>[0] = "wire";
 
 	activate(being: Being) {
+		sfx.play(this.sound);
 		this.damage(being);
 		being.damage(this);
 	}
@@ -34,7 +37,7 @@ export default class Wire extends Item {
 			tryConnection([tx, ty], dir, map, Ctor);
 		});
 
-		log.add("You build a barbed wire segment.");
+		log.add(`You build ${this.name.article()} segment.`);
 	}
 }
 

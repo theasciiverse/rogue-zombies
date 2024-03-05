@@ -4,6 +4,10 @@ const DB = {
 	"crowbar": 3,
 	"swoosh": 1,
 	"barricade": 3,
+	"wire": 3,
+	"fence": 2,
+	"bazooka": 1,
+	"mine": 1,
 }
 
 let audio: Record<keyof typeof DB, HTMLAudioElement[]> = {};

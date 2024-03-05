@@ -362,7 +362,11 @@ var DB = {
   "rake": 3,
   "crowbar": 3,
   "swoosh": 1,
-  "barricade": 3
+  "barricade": 3,
+  "wire": 3,
+  "fence": 2,
+  "bazooka": 1,
+  "mine": 1
 };
 var audio = {};
 function init2() {
@@ -632,6 +636,7 @@ var Mine = class extends Item {
   async activate(being) {
     const { map, position } = this;
     map.removeItem(this);
+    play("mine");
     await explode(map, position, 3, this);
   }
 };
@@ -650,12 +655,14 @@ var Bazooka = class extends Item {
       tx += direction[0];
       ty += direction[1];
       if (!map.isPositionValid(tx, ty)) {
+        play("swoosh");
         add("it flies away.");
         break;
       }
       let target = map.getBlocker(tx, ty);
       if (target) {
         add(`${target.name.article()} is hit!`);
+        play("bazooka");
         await explode(map, [tx, ty], 2, this);
         break;
       } else {
@@ -677,7 +684,9 @@ var Wire = class extends Item {
   static Name = "Barbed wire";
   static description = "Auto-connects to nearby wires. Has little health.";
   visual = { ch: "#", fg: "#888" };
+  sound = "wire";
   activate(being) {
+    play(this.sound);
     this.damage(being);
     being.damage(this);
   }
@@ -695,7 +704,7 @@ var Wire = class extends Item {
     dirs_default.forEach((dir) => {
       tryConnection([tx, ty], dir, map, Ctor);
     });
-    add("You build a barbed wire segment.");
+    add(`You build ${this.name.article()} segment.`);
   }
 };
 function tryConnection(position, direction, map, Ctor) {
@@ -731,6 +740,7 @@ var Fence = class extends Wire {
   static description = "Auto-connects to nearby fences. Has more health.";
   _hp = COLORS3.length - 1;
   visual = { ch: "\u2248", fg: COLORS3[this._hp] };
+  sound = "fence";
   damage(source) {
     super.damage(source);
     if (this._hp > 0) {

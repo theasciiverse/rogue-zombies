@@ -1,6 +1,7 @@
 import Item from "./item.js";
 import * as log from "../log.js";
 import { explode } from "../explosion.js";
+import * as sfx from "../sfx.js";
 
 
 export default class Bazooka extends Item {
@@ -20,6 +21,7 @@ export default class Bazooka extends Item {
 			ty += direction[1];
 
 			if (!map.isPositionValid(tx, ty)) {
+				sfx.play("swoosh");
 				log.add("it flies away.");
 				break;
 			}
@@ -27,6 +29,7 @@ export default class Bazooka extends Item {
 			let target = map.getBlocker(tx, ty);
 			if (target) {  // hit!
 				log.add(`${target.name.article()} is hit!`);
+				sfx.play("bazooka");
 				await explode(map, [tx, ty], 2, this);
 				break;
 			} else {  // fly further
