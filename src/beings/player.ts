@@ -62,7 +62,7 @@ export default class Player extends Being {
 			return (num ? this.tryItem(num[0]) : false);
 		}
 
-		if (key.key == "b") {
+		if (key.key == "b" && level.buyingAllowed) {
 			await buy(this);
 			return false;
 		}

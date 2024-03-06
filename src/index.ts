@@ -4,19 +4,25 @@ import * as sfx from "./sfx.js";
 import welcome from "./dialogs/welcome.js";
 import pickLevel from "./dialogs/levels.js";
 
+import Combo from "./renderer/combo.js";
+import Canvas from "./renderer/canvas.js";
+import DOM from "./renderer/dom.js";
+
 
 async function run() {
-	await metrics.init([43, 30]);
+	let RCtor = Combo;
+
+	await metrics.init([43, 30], RCtor);
 	sfx.init();
 
-	let renderer = new metrics.Renderer();
+	let renderer = new RCtor();
 	document.querySelector("main").prepend(renderer.node);
 
 	await welcome();
 
 	while (true) {
 		let Ctor = await pickLevel()
-		await new Ctor({renderer}).play();
+		await new Ctor(renderer).play();
 	}
 }
 

@@ -52,6 +52,10 @@ kbd::before, kbd::after {
 kbd::before { content: "["; }
 kbd::after { content: "]"; }
 
+dt { font-weight: bold; }
+dd { margin-left: 4ch; }
+
+
 .renderer.canvas, .renderer.dom {
 	width: calc(var(--tile-width) * var(--map-width));
 	height: calc(var(--tile-height) * var(--map-height));
@@ -108,7 +112,7 @@ dialog h2::before, dialog h2::after { color: goldenrod; }
 dialog h2::before { content: "--== "; }
 dialog h2::after { content: " ==--"; }
 
-dialog h2, dialog p, dialog table { margin: 0 0 1.3em 0; }
+dialog h2, dialog p, dialog table, dialog dl, dialog dd { margin-top: 0; margin-bottom: 1.3em; }
 
 table { border-collapse: collapse; }
 td { padding: 0; }

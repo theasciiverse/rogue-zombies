@@ -1,15 +1,13 @@
-import Combo from "./renderer/combo.js";
-import Canvas from "./renderer/canvas.js";
-import DOM from "./renderer/dom.js";
+import Renderer from "./renderer/renderer.js";
 
 
 export let tileCount: number[];
 export let tileSize: number[];
 export let charWidth: number;
-export let Renderer = Combo;
 const { style } = document.documentElement;
 
 
+let RCtor: typeof Renderer;
 let resizeTimeout: ReturnType<typeof setTimeout>;
 
 
@@ -25,7 +23,7 @@ function onResize() {
 
 function measure() {
 	let realTileCount = [tileCount[0], tileCount[1]+5];
-	tileSize = Renderer.computeTileSize(realTileCount, [window.innerWidth, window.innerHeight], [0.7, 1.0]);
+	tileSize = RCtor.computeTileSize(realTileCount, [window.innerWidth, window.innerHeight], [0.7, 1.0]);
 	console.log(tileSize)
 
 	style.setProperty("--tile-width", `${tileSize[0]}px`);
@@ -35,8 +33,9 @@ function measure() {
 	style.setProperty("--char-width", `${charWidth}px`);
 }
 
-export async function init(tc: number[]) {
+export async function init(tc: number[], R: typeof Renderer) {
 	tileCount = tc;
+	RCtor = R;
 
 	style.setProperty("--map-width", String(tileCount[0]));
 	style.setProperty("--map-height", String(tileCount[1]));

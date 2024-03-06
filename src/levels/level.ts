@@ -10,20 +10,18 @@ import * as metrics from "../metrics.js";
 import gameOver from "../dialogs/gameover.js";
 
 
-interface Config {
-	renderer: Renderer;
-}
-
 export default class Level {
-	readonly player: Player;
+	static Name = "???";
+	static description = "???";
+
+	readonly player: Player; // chteji znat zombies a status
+	readonly map: Map; // chce znat player a zombies
 	protected zombies: Zombies;
-	protected renderer: Renderer;
 	protected started = false;
 	protected _score = 0;
-	readonly map: Map;
 
-	constructor(protected config: Config) {
-		let map = new Map(metrics.tileCount[0], metrics.tileCount[1], config.renderer);
+	constructor(renderer: Renderer) {
+		let map = new Map(metrics.tileCount[0], metrics.tileCount[1], renderer);
 		this.map = map;
 
 		let zombies = new Zombies(this);
@@ -31,13 +29,6 @@ export default class Level {
 
 		let player = new Player(this);
 		this.player = player;
-
-		player.setItem("rake", Infinity);
-		player.setItem("barricade", 3);
-		player.setItem("mine", Infinity);
-		player.setItem("bazooka", Infinity);
-		player.setItem("wire", Infinity);
-		player.setItem("fence", Infinity);
 
 		player.position = [15,15];
 		map.addBeing(player);
@@ -52,20 +43,17 @@ export default class Level {
 		this.updateStatus();
 	}
 
-	get canBeStarted() {
-		return !this.started;
-	}
+	get buyingAllowed() { return true; }
+	get canBeStarted() { return !this.started; }
 
 	start() {
 		this.started = true;
 		this.updateStatus();
 	}
 
-	updateStatus() {
-		status.update(this);
-	}
+	updateStatus() { status.update(this); }
 
-	get score() { return this._score; }
+	get score() { return this._score; } // chce znat gameOver a status
 	increaseScore() {
 		this._score++;
 		this.player.money++;
@@ -80,7 +68,7 @@ export default class Level {
 			await log.flush();
 		}
 
-		await gameOver(this.score);
+		await gameOver(this);
 	}
 
 	protected get done() { return (this.player.hp <= 0); }

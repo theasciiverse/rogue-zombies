@@ -14,9 +14,12 @@ export function update(level: Level) {
 
 	let items = ITEMS.map(it => buildItem(it, player));
 	let status = [
-		"Health: ", buildHP(player.hp, rules.PLAYER_HP),
-		"  ", "Money: ", buildMoney(player.money)
+		"Health: ", buildHP(player.hp, rules.PLAYER_HP)
 	];
+
+	if (level.buyingAllowed) {
+		status.push("  ", "Money: ", buildMoney(player.money));
+	}
 
 	if (level.canBeStarted) {
 		status.push("  ", buildKey("S", "tart the invasion"));
@@ -24,8 +27,11 @@ export function update(level: Level) {
 		status.push("  ", "Score: ", buildScore(level.score));
 	}
 
+	if (level.buyingAllowed) {
+		status.push("  ", buildKey("B", "uy items"));
+	}
+
 	status.push(
-		"  ", buildKey("B", "uy items"),
 		"  ", buildKey("?", "Help")
 	);
 

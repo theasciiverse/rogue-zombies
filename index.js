@@ -18,145 +18,12 @@ String.prototype.article = function() {
   return `${a} ${this}`;
 };
 
-// src/renderer/renderer.ts
-var Renderer = class {
-  node;
-  static computeTileSize(tileCount2, area, aspectRatioRange) {
-    let w = Math.floor(area[0] / tileCount2[0]);
-    let h = Math.floor(area[1] / tileCount2[1]);
-    let ar = w / h;
-    if (ar < aspectRatioRange[0]) {
-      h = Math.floor(w / aspectRatioRange[0]);
-    } else if (ar > aspectRatioRange[1]) {
-      w = Math.floor(h * aspectRatioRange[1]);
-    }
-    return [w, h];
-  }
-};
-
-// src/renderer/canvas.ts
-var DPR = devicePixelRatio > 1 ? 2 : 1;
-var Canvas = class extends Renderer {
-  node = document.createElement("canvas");
-  ctx = this.node.getContext("2d");
-  tileSize;
-  constructor() {
-    super();
-    this.node.className = "renderer canvas";
-  }
-  configure(tileCount2, tileSize2) {
-    const { node: node3, ctx } = this;
-    node3.width = tileCount2[0] * tileSize2[0] * DPR;
-    node3.height = tileCount2[1] * tileSize2[1] * DPR;
-    ctx.restore();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = `bold ${tileSize2[1]}px input`;
-    ctx.scale(DPR, DPR);
-    this.tileSize = tileSize2;
-  }
-  draw(x, y, drawables) {
-    let visuals = drawables.map((d) => d.visual);
-    let visual = resolveVisual(visuals);
-    this.drawVisual(x, y, visual);
-  }
-  drawVisual(x, y, visual) {
-    const { ctx, tileSize: tileSize2 } = this;
-    ctx.fillStyle = visual.bg;
-    ctx.fillRect(x * tileSize2[0], y * tileSize2[1], tileSize2[0], tileSize2[1]);
-    if (visual.ch) {
-      ctx.fillStyle = visual.fg;
-      ctx.fillText(visual.ch, (x + 0.5) * tileSize2[0], (y + 0.5) * tileSize2[1] + 1);
-    }
-  }
-  remove() {
-  }
-};
-function resolveVisual(visuals) {
-  let visual = {
-    bg: "black",
-    fg: "gray",
-    ch: ""
-  };
-  visuals.forEach((v) => Object.assign(visual, v));
-  return visual;
-}
-
-// src/renderer/dom.ts
-var DOM = class extends Renderer {
-  node = document.createElement("div");
-  nodes = /* @__PURE__ */ new Map();
-  constructor() {
-    super();
-    this.node.className = "renderer dom";
-  }
-  configure() {
-  }
-  draw(x, y, drawables) {
-    const { node: node3, nodes } = this;
-    drawables.forEach((d, i) => {
-      let dnode = nodes.get(d);
-      if (!dnode) {
-        dnode = document.createElement("div");
-        node3.append(dnode);
-        nodes.set(d, dnode);
-      }
-      dnode.style.setProperty("--x", String(x));
-      dnode.style.setProperty("--y", String(y));
-      dnode.style.zIndex = String(i + 1);
-      const { visual } = d;
-      if (visual.bg) {
-        dnode.style.backgroundColor = visual.bg;
-      }
-      if (visual.fg) {
-        dnode.style.color = visual.fg;
-      }
-      if (visual.ch) {
-        dnode.textContent = visual.ch;
-      }
-    });
-  }
-  remove(drawable) {
-    const { nodes } = this;
-    let dnode = nodes.get(drawable);
-    dnode && dnode.remove();
-  }
-};
-
-// src/renderer/combo.ts
-var Combo = class extends Renderer {
-  node = document.createElement("div");
-  renderers;
-  static computeTileSize(tileCount2, area, aspectRatioRange) {
-    let halfArea = [area[0] / 2, area[1]];
-    let fakeTileCount = [tileCount2[0] * 2 + 1, tileCount2[1]];
-    return super.computeTileSize(fakeTileCount, area, aspectRatioRange);
-  }
-  constructor() {
-    super();
-    const { node: node3 } = this;
-    node3.className = "renderer combo";
-    let renderers = [Canvas, DOM].map((r) => new r());
-    node3.append(...renderers.map((r) => r.node));
-    this.renderers = renderers;
-  }
-  draw(x, y, drawables) {
-    this.renderers.forEach((r) => r.draw(x, y, drawables));
-  }
-  remove(drawable) {
-    this.renderers.forEach((r) => r.remove(drawable));
-  }
-  configure(tileCount2, tileSize2) {
-    this.renderers.forEach((r) => r.configure(tileCount2, tileSize2));
-  }
-};
-
 // src/metrics.ts
 var tileCount;
 var tileSize;
 var charWidth;
-var Renderer2 = Combo;
 var { style } = document.documentElement;
+var RCtor;
 var resizeTimeout;
 function onResized() {
   measure();
@@ -170,15 +37,16 @@ function onResize() {
 }
 function measure() {
   let realTileCount = [tileCount[0], tileCount[1] + 5];
-  tileSize = Renderer2.computeTileSize(realTileCount, [window.innerWidth, window.innerHeight], [0.7, 1]);
+  tileSize = RCtor.computeTileSize(realTileCount, [window.innerWidth, window.innerHeight], [0.7, 1]);
   console.log(tileSize);
   style.setProperty("--tile-width", `${tileSize[0]}px`);
   style.setProperty("--tile-height", `${tileSize[1]}px`);
   charWidth = measureCharWidth();
   style.setProperty("--char-width", `${charWidth}px`);
 }
-async function init(tc) {
+async function init(tc, R) {
   tileCount = tc;
+  RCtor = R;
   style.setProperty("--map-width", String(tileCount[0]));
   style.setProperty("--map-height", String(tileCount[1]));
   document.fonts.forEach((f) => f.load());
@@ -1036,7 +904,7 @@ var Player = class extends Being {
       let num = key.code.match(/\d/);
       return num ? this.tryItem(num[0]) : false;
     }
-    if (key.key == "b") {
+    if (key.key == "b" && level.buyingAllowed) {
       await buy(this);
       return false;
     }
@@ -1355,19 +1223,20 @@ function update(level) {
   let items = ITEMS.map((it) => buildItem(it, player));
   let status = [
     "Health: ",
-    buildHP(player.hp, PLAYER_HP),
-    "  ",
-    "Money: ",
-    buildMoney(player.money)
+    buildHP(player.hp, PLAYER_HP)
   ];
+  if (level.buyingAllowed) {
+    status.push("  ", "Money: ", buildMoney(player.money));
+  }
   if (level.canBeStarted) {
     status.push("  ", buildKey("S", "tart the invasion"));
   } else {
     status.push("  ", "Score: ", buildScore(level.score));
   }
+  if (level.buyingAllowed) {
+    status.push("  ", buildKey("B", "uy items"));
+  }
   status.push(
-    "  ",
-    buildKey("B", "uy items"),
     "  ",
     buildKey("?", "Help")
   );
@@ -1438,12 +1307,13 @@ var timing = {
 };
 
 // src/dialogs/gameover.ts
-async function gameOver(score) {
+async function gameOver(level) {
   let dialog = new Dialog("Game over!");
   let p1 = document.createElement("p");
   p1.innerHTML = "Game over! The zombies have eaten your brains.";
   let p2 = document.createElement("p");
-  p2.innerHTML = `Your score: <span class="score">${score}</span>`;
+  let Ctor = level.constructor;
+  p2.innerHTML = `Your score (${Ctor.Name}): <span class="score">${level.score}</span>`;
   let p3 = document.createElement("p");
   p3.innerHTML = `Press <kbd>space</kbd> to return to the main menu.`;
   dialog.append(p1, p2, p3);
@@ -1453,20 +1323,22 @@ async function gameOver(score) {
 
 // src/levels/level.ts
 var Level = class {
-  constructor(config) {
-    this.config = config;
-    let map = new Map2(tileCount[0], tileCount[1], config.renderer);
+  static Name = "???";
+  static description = "???";
+  player;
+  // chteji znat zombies a status
+  map;
+  // chce znat player a zombies
+  zombies;
+  started = false;
+  _score = 0;
+  constructor(renderer) {
+    let map = new Map2(tileCount[0], tileCount[1], renderer);
     this.map = map;
     let zombies = new Zombies(this);
     this.zombies = zombies;
     let player = new Player(this);
     this.player = player;
-    player.setItem("rake", Infinity);
-    player.setItem("barricade", 3);
-    player.setItem("mine", Infinity);
-    player.setItem("bazooka", Infinity);
-    player.setItem("wire", Infinity);
-    player.setItem("fence", Infinity);
     player.position = [15, 15];
     map.addBeing(player);
     [
@@ -1477,12 +1349,9 @@ var Level = class {
     ].forEach((h) => map.addItem(h));
     this.updateStatus();
   }
-  player;
-  zombies;
-  renderer;
-  started = false;
-  _score = 0;
-  map;
+  get buyingAllowed() {
+    return true;
+  }
   get canBeStarted() {
     return !this.started;
   }
@@ -1496,6 +1365,7 @@ var Level = class {
   get score() {
     return this._score;
   }
+  // chce znat gameOver a status
   increaseScore() {
     this._score++;
     this.player.money++;
@@ -1509,38 +1379,212 @@ var Level = class {
       }
       await flush();
     }
-    await gameOver(this.score);
+    await gameOver(this);
   }
   get done() {
     return this.player.hp <= 0;
   }
 };
 
+// src/levels/tutorial.ts
+var Tutorial = class extends Level {
+  static Name = "Tutorial";
+  static description = "basic controls and concepts";
+};
+
+// src/levels/regular.ts
+var Regular = class extends Level {
+  static Name = "Regular";
+};
+
+// src/levels/sandbox.ts
+var Sandbox = class extends Level {
+  static Name = "Sandbox";
+  static description = "unlimited resources, unlimited carnage";
+  constructor(renderer) {
+    super(renderer);
+    const { player } = this;
+    player.setItem("rake", Infinity);
+    player.setItem("barricade", Infinity);
+    player.setItem("trap", Infinity);
+    player.setItem("mine", Infinity);
+    player.setItem("bazooka", Infinity);
+    player.setItem("wire", Infinity);
+    player.setItem("fence", Infinity);
+  }
+  get buyingAllowed() {
+    return false;
+  }
+};
+
 // src/dialogs/levels.ts
-var MODES = [
-  { id: "tutorial", name: "Tutorial: basic controls and concepts", Ctor: Level }
-];
+var Ctors = [Tutorial, Regular, Level, Sandbox];
 async function pickLevel() {
   let dialog = new Dialog("Game mode selection");
-  MODES.forEach((mode, i) => {
-    dialog.append(mode.name);
-    dialog.addKey({ id: mode.id, code: `Numpad${i + 1}` });
-    dialog.addKey({ id: mode.id, code: `Digit${i + 1}` });
+  let p = document.createElement("p");
+  p.textContent = "Please pick a game mode to use by pressing the corresponding number key.";
+  dialog.append(p);
+  let dl = document.createElement("dl");
+  dialog.append(dl);
+  Ctors.forEach((Ctor, i) => {
+    let dt = document.createElement("dt");
+    let kbd = document.createElement("kbd");
+    kbd.textContent = String(i + 1);
+    dt.append(kbd, " ", Ctor.Name);
+    let dd = document.createElement("dd");
+    dd.textContent = Ctor.description;
+    dl.append(dt, dd);
+    dialog.addKey({ id: Ctor.Name, code: `Numpad${i + 1}` });
+    dialog.addKey({ id: Ctor.Name, code: `Digit${i + 1}` });
   });
   let id = await dialog.show();
-  return MODES.find((mode) => mode.id == id).Ctor;
+  return Ctors.find((Ctor) => Ctor.Name == id);
 }
+
+// src/renderer/renderer.ts
+var Renderer = class {
+  node;
+  static computeTileSize(tileCount2, area, aspectRatioRange) {
+    let w = Math.floor(area[0] / tileCount2[0]);
+    let h = Math.floor(area[1] / tileCount2[1]);
+    let ar = w / h;
+    if (ar < aspectRatioRange[0]) {
+      h = Math.floor(w / aspectRatioRange[0]);
+    } else if (ar > aspectRatioRange[1]) {
+      w = Math.floor(h * aspectRatioRange[1]);
+    }
+    return [w, h];
+  }
+};
+
+// src/renderer/canvas.ts
+var DPR = devicePixelRatio > 1 ? 2 : 1;
+var Canvas = class extends Renderer {
+  node = document.createElement("canvas");
+  ctx = this.node.getContext("2d");
+  tileSize;
+  constructor() {
+    super();
+    this.node.className = "renderer canvas";
+  }
+  configure(tileCount2, tileSize2) {
+    const { node: node3, ctx } = this;
+    node3.width = tileCount2[0] * tileSize2[0] * DPR;
+    node3.height = tileCount2[1] * tileSize2[1] * DPR;
+    ctx.restore();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${tileSize2[1]}px input`;
+    ctx.scale(DPR, DPR);
+    this.tileSize = tileSize2;
+  }
+  draw(x, y, drawables) {
+    let visuals = drawables.map((d) => d.visual);
+    let visual = resolveVisual(visuals);
+    this.drawVisual(x, y, visual);
+  }
+  drawVisual(x, y, visual) {
+    const { ctx, tileSize: tileSize2 } = this;
+    ctx.fillStyle = visual.bg;
+    ctx.fillRect(x * tileSize2[0], y * tileSize2[1], tileSize2[0], tileSize2[1]);
+    if (visual.ch) {
+      ctx.fillStyle = visual.fg;
+      ctx.fillText(visual.ch, (x + 0.5) * tileSize2[0], (y + 0.5) * tileSize2[1] + 1);
+    }
+  }
+  remove() {
+  }
+};
+function resolveVisual(visuals) {
+  let visual = {
+    bg: "black",
+    fg: "gray",
+    ch: ""
+  };
+  visuals.forEach((v) => Object.assign(visual, v));
+  return visual;
+}
+
+// src/renderer/dom.ts
+var DOM = class extends Renderer {
+  node = document.createElement("div");
+  nodes = /* @__PURE__ */ new Map();
+  constructor() {
+    super();
+    this.node.className = "renderer dom";
+  }
+  configure() {
+  }
+  draw(x, y, drawables) {
+    const { node: node3, nodes } = this;
+    drawables.forEach((d, i) => {
+      let dnode = nodes.get(d);
+      if (!dnode) {
+        dnode = document.createElement("div");
+        node3.append(dnode);
+        nodes.set(d, dnode);
+      }
+      dnode.style.setProperty("--x", String(x));
+      dnode.style.setProperty("--y", String(y));
+      dnode.style.zIndex = String(i + 1);
+      const { visual } = d;
+      if (visual.bg) {
+        dnode.style.backgroundColor = visual.bg;
+      }
+      if (visual.fg) {
+        dnode.style.color = visual.fg;
+      }
+      if (visual.ch) {
+        dnode.textContent = visual.ch;
+      }
+    });
+  }
+  remove(drawable) {
+    const { nodes } = this;
+    let dnode = nodes.get(drawable);
+    dnode && dnode.remove();
+  }
+};
+
+// src/renderer/combo.ts
+var Combo = class extends Renderer {
+  node = document.createElement("div");
+  renderers;
+  static computeTileSize(tileCount2, area, aspectRatioRange) {
+    let halfArea = [area[0] / 2, area[1]];
+    let fakeTileCount = [tileCount2[0] * 2 + 1, tileCount2[1]];
+    return super.computeTileSize(fakeTileCount, area, aspectRatioRange);
+  }
+  constructor() {
+    super();
+    const { node: node3 } = this;
+    node3.className = "renderer combo";
+    let renderers = [Canvas, DOM].map((r) => new r());
+    node3.append(...renderers.map((r) => r.node));
+    this.renderers = renderers;
+  }
+  draw(x, y, drawables) {
+    this.renderers.forEach((r) => r.draw(x, y, drawables));
+  }
+  remove(drawable) {
+    this.renderers.forEach((r) => r.remove(drawable));
+  }
+  configure(tileCount2, tileSize2) {
+    this.renderers.forEach((r) => r.configure(tileCount2, tileSize2));
+  }
+};
 
 // src/index.ts
 async function run() {
-  await init([43, 30]);
+  let RCtor2 = Combo;
+  await init([43, 30], RCtor2);
   init2();
-  let renderer = new Renderer2();
+  let renderer = new RCtor2();
   document.querySelector("main").prepend(renderer.node);
   await welcome();
   while (true) {
     let Ctor = await pickLevel();
-    await new Ctor({ renderer }).play();
+    await new Ctor(renderer).play();
   }
 }
 run();
