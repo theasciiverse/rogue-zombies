@@ -10,6 +10,8 @@ import * as metrics from "../metrics.js";
 import gameOver from "../dialogs/gameover.js";
 
 
+const ZOMBIE_MOVE_CHANCE = 0.5;
+
 export default class Level {
 	static Name = "???";
 	static description = "???";
@@ -17,8 +19,9 @@ export default class Level {
 	readonly player: Player; // chteji znat zombies a status
 	readonly map: Map; // chce znat player a zombies
 	protected zombies: Zombies;
-	protected started = false;
+	protected _started = false;
 	protected _score = 0;
+	protected _rounds = 0;
 
 	constructor(renderer: Renderer) {
 		let map = new Map(metrics.tileCount[0], metrics.tileCount[1], renderer);
@@ -43,16 +46,19 @@ export default class Level {
 		this.updateStatus();
 	}
 
+	get zombieMoveChance()  { return ZOMBIE_MOVE_CHANCE; }
 	get buyingAllowed() { return true; }
-	get canBeStarted() { return !this.started; }
+	get canBeStarted() { return !this._started; }
+	get started() { return this._started; }
 
 	start() {
-		this.started = true;
+		this._started = true;
 		this.updateStatus();
 	}
 
 	updateStatus() { status.update(this); }
 
+	get rounds() { return this._rounds; } // chce znat status
 	get score() { return this._score; } // chce znat gameOver a status
 	increaseScore() {
 		this._score++;
@@ -63,8 +69,11 @@ export default class Level {
 		const { player, zombies } = this;
 
 		while (!this.done) {
+			this._rounds++;
+			this.updateStatus();
+
 			await player.play();
-			if (this.started) { await zombies.play(); }
+			await zombies.play();
 			await log.flush();
 		}
 

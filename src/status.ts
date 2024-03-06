@@ -1,70 +1,126 @@
-import Player from "./beings/player.js";
+import { MAX_HP } from "./beings/player.js";
 import Level from "./levels/level.js";
 import { ITEMS, ItemTemplate } from "./items/db.js"
-import * as rules from "./rules.js"
 
 
 const node = document.querySelector<HTMLElement>("#status")!;
 
 let previousValues: Record<string, number> = {};
+let DOM_ITEMS: Record<string, HTMLElement> = {};
+let DOM_MISC: Record<string, HTMLElement> = {};
 
+export function init() {
+	ITEMS.forEach(it => DOM_ITEMS[it.id] = buildItem(it));
+
+	DOM_MISC["hp"] = buildHP();
+	DOM_MISC["money"] = buildMoney();
+	DOM_MISC["start"] = buildStart();
+	DOM_MISC["score"] = buildScore();
+	DOM_MISC["buy"] = buildBuy();
+	DOM_MISC["help"] = buildHelp();
+
+	let nodes = [
+		...Object.values(DOM_ITEMS),
+		"\n",
+		DOM_MISC["hp"], DOM_MISC["money"], DOM_MISC["start"],
+		DOM_MISC["score"], DOM_MISC["buy"], DOM_MISC["help"]
+	];
+
+	node.replaceChildren(...nodes);
+}
 
 export function update(level: Level) {
 	const { player } = level;
 
-	let items = ITEMS.map(it => buildItem(it, player));
-	let status = [
-		"Health: ", buildHP(player.hp, rules.PLAYER_HP)
-	];
+	ITEMS.forEach(it => {
+		let node = DOM_ITEMS[it.id];
+		let count = player.getItem(it.id);
+		node.classList.toggle("disabled", count == 0);
+		node.querySelector(".count")!.textContent = (count == Infinity ? "∞" : String(count));
+	});
 
-	if (level.buyingAllowed) {
-		status.push("  ", "Money: ", buildMoney(player.money));
-	}
-
-	if (level.canBeStarted) {
-		status.push("  ", buildKey("S", "tart the invasion"));
-	} else {
-		status.push("  ", "Score: ", buildScore(level.score));
-	}
-
-	if (level.buyingAllowed) {
-		status.push("  ", buildKey("B", "uy items"));
-	}
-
-	status.push(
-		"  ", buildKey("?", "Help")
-	);
-
-	node.replaceChildren(...items, "\n", ...status);
+	updateHP(level);
+	updateMoney(level);
+	updateStart(level);
+	updateScore(level);
+	updateBuy(level);
 }
 
-function buildHP(curent: number, max: number) {
+function buildHP() {
 	let node = document.createElement("span");
-	node.className = "hp";
+	node.innerHTML = `Health: <span class="hp"></span>`;
+	return node;
+}
+
+function updateHP(level: Level) {
+	let current = level.player.hp;
+	let max = MAX_HP;
 
 	let str = "";
 	for (let i=0;i<max;i++) {
-		str += (i < curent ? "♥" : "♡");
+		str += (i < current ? "♥" : "♡");
 	}
 
+	let node = DOM_MISC["hp"].querySelector(".hp")!;
 	node.textContent = str;
-	animateIfChanged(node, curent);
+	animateIfChanged(node, current);
+}
+
+function buildMoney() {
+	let node = document.createElement("span");
+	node.innerHTML = `  Money: <span class="money"></span>`;
 	return node;
 }
 
-function buildMoney(money: number) {
+function updateMoney(level: Level) {
+	let node = DOM_MISC["money"];
+	node.hidden = (!level.buyingAllowed);
+
+	let span = node.querySelector(".money")!;
+	let money = level.player.money;
+	span.textContent = String(money);
+	animateIfChanged(span, money);
+}
+
+function buildScore() {
 	let node = document.createElement("span");
-	node.className = "money";
-	node.textContent = String(money);
-	animateIfChanged(node, money);
+	node.innerHTML = `  Score: <span class="score"></span>`;
 	return node;
 }
 
-function buildScore(score: number) {
+function updateScore(level: Level) {
+	let node = DOM_MISC["score"];
+	node.hidden = level.canBeStarted;
+
+	let span = node.querySelector(".score")!;
+	let score = level.score;
+	span.textContent = String(score);
+	animateIfChanged(span, score);
+}
+
+function buildStart() {
 	let node = document.createElement("span");
-	node.className = "score";
-	node.textContent = String(score);
-	animateIfChanged(node, score);
+	node.append("  ", buildKey("S", "tart the invasion"));
+	return node;
+}
+
+function updateStart(level: Level) {
+	DOM_MISC["start"].hidden = !level.canBeStarted;
+}
+
+function buildBuy() {
+	let node = document.createElement("span");
+	node.append("  ", buildKey("B", "uy items"));
+	return node;
+}
+
+function updateBuy(level: Level) {
+	DOM_MISC["buy"].hidden = !level.buyingAllowed;
+}
+
+function buildHelp() {
+	let node = document.createElement("span");
+	node.append("  ", buildKey("?", "Help"));
 	return node;
 }
 
@@ -78,25 +134,20 @@ function buildKey(key: string, text: string) {
 	return node;
 }
 
-
-function buildItem(it: ItemTemplate, player: Player) {
+function buildItem(it: ItemTemplate) {
 	let node = document.createElement("span");
-
-	let count = player.getItem(it.id);
-	node.classList.toggle("disabled", count == 0);
 
 	let kbd = document.createElement("kbd");
 	kbd.textContent = it.key;
 
 	let c = document.createElement("span");
 	c.className = "count";
-	c.textContent = (count == Infinity ? "∞" : String(count));
 	node.append(kbd, it.short || it.ctor.Name, c, "  ");
 
 	return node;
 }
 
-function animateIfChanged(node: HTMLElement, value: number) {
+function animateIfChanged(node: Element, value: number) {
 	if (node.className in previousValues) {
 		let previous = previousValues[node.className];
 		if (previous != value) {
@@ -107,7 +158,6 @@ function animateIfChanged(node: HTMLElement, value: number) {
 		previousValues[node.className] = value;
 	}
 }
-
 
 const keyframes = {
 	transform: ["scale(1)", "scale(1.6)", "scale(1)"],

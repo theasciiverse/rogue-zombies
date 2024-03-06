@@ -24,7 +24,7 @@ function onResize() {
 function measure() {
 	let realTileCount = [tileCount[0], tileCount[1]+5];
 	tileSize = RCtor.computeTileSize(realTileCount, [window.innerWidth, window.innerHeight], [0.7, 1.0]);
-	console.log(tileSize)
+//	console.log(tileSize)
 
 	style.setProperty("--tile-width", `${tileSize[0]}px`);
 	style.setProperty("--tile-height", `${tileSize[1]}px`);

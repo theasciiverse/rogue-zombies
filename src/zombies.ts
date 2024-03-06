@@ -1,7 +1,6 @@
 import Zombie from "./beings/zombie.js";
 import Map from "./map.js";
 import Level from "./levels/level.js";
-import * as rules from "./rules.js";
 import * as sfx from "./sfx.js";
 
 
@@ -15,19 +14,21 @@ export default class Zombies {
 
 	async play() {
 		const { zombies, level } = this;
-		this.rounds++;
 
-		let activeZombies = zombies.filter(_ => Math.random() > rules.ZOMBIE_MOVE_CHANCE);
+		let activeZombies = zombies.filter(_ => Math.random() > level.zombieMoveChance);
 		// FIXME: sort podle vzdalenosti od hrace
 		for (let i=0; i<activeZombies.length;i++) {
 			await activeZombies[i].play(level.player);
 		}
 
-		let spawnPotential = this.updateSpawnPotential();
-		if (spawnPotential >= 1) {
-			let amount = Math.floor(this.spawnPotential);
-			this.spawnPotential -= amount;
-			this.spawn(amount);
+		if (level.started) { // spawn logic
+			this.rounds++;
+			let spawnPotential = this.updateSpawnPotential();
+			if (spawnPotential >= 1) {
+				let amount = Math.floor(this.spawnPotential);
+				this.spawnPotential -= amount;
+				this.spawn(amount);
+			}
 		}
 	}
 

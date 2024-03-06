@@ -38,7 +38,6 @@ function onResize() {
 function measure() {
   let realTileCount = [tileCount[0], tileCount[1] + 5];
   tileSize = RCtor.computeTileSize(realTileCount, [window.innerWidth, window.innerHeight], [0.7, 1]);
-  console.log(tileSize);
   style.setProperty("--tile-width", `${tileSize[0]}px`);
   style.setProperty("--tile-height", `${tileSize[1]}px`);
   charWidth = measureCharWidth();
@@ -93,6 +92,31 @@ function play(what) {
   audio[what].random().play();
 }
 
+// src/entity.ts
+var Entity = class {
+  constructor(map) {
+    this.map = map;
+  }
+  _position;
+  _hp = 1;
+  get name() {
+    return "";
+  }
+  get position() {
+    return this._position;
+  }
+  set position(position) {
+    this._position = position;
+    this.map.changed(this);
+  }
+  damage(source) {
+    this._hp -= 1;
+    if (this._hp == 0) {
+      this.die(source);
+    }
+  }
+};
+
 // src/keyboard.ts
 function matchFilter(event, filter) {
   if (!filter.length) {
@@ -118,100 +142,6 @@ async function readKey(allowed = []) {
     window.addEventListener("keydown", onKeyDown, { signal });
   });
 }
-
-// src/dialogs/dialog.ts
-var Dialog = class {
-  dialog = document.createElement("dialog");
-  resolve;
-  keys = [];
-  constructor(title) {
-    let h2 = document.createElement("h2");
-    h2.textContent = title;
-    this.append(h2);
-  }
-  append(...nodes) {
-    this.dialog.append(...nodes);
-  }
-  async show() {
-    const { dialog } = this;
-    document.body.append(dialog);
-    dialog.showModal();
-    document.activeElement && document.activeElement.blur();
-    while (true) {
-      let event = await readKey();
-      if (event.key == "Escape") {
-        event.preventDefault();
-      }
-      let id = this.matchKeyEvent(event);
-      if (id !== null) {
-        dialog.close();
-        dialog.remove();
-        return id;
-      }
-    }
-  }
-  addKey(key) {
-    this.keys.push(key);
-  }
-  matchKeyEvent(event) {
-    let key = this.keys.find((key2) => {
-      if ("key" in key2 && key2.key != event.key) {
-        return false;
-      }
-      if ("code" in key2 && key2.code != event.code) {
-        return false;
-      }
-      return true;
-    });
-    return key ? key.id : null;
-  }
-};
-
-// src/dialogs/welcome.ts
-function welcome() {
-  let dialog = new Dialog("Rogue Zombies");
-  let node3 = document.createElement("div");
-  node3.innerHTML = HTML;
-  dialog.append(...node3.childNodes);
-  dialog.addKey({ id: "", code: "Space" });
-  return dialog.show();
-}
-var HTML = `
-	<p>Welcome! Hordes of zombies are drawing nearby, and you are the only one who can stop them. The time has come to arm yourself and prepare for the worst.</p>
-	<p>A bit of warning: this is a roguelike game created for the 2024 7DRL challenge. It may contain bugs, surprising UI/UX and possibly even a lutefisk. You can find more details at the <a href="https://github.com/ondras/roguezombies">game's GitHub repository</a>.</p>
-	<p>Recommendations:</p>
-	<ul>
-		<li>browser window size of at least 800\xD7600 pixels</li>
-		<li>audio on (game uses sound effects)</li>
-		<li>background music (<a href="https://www.youtube.com/playlist?list=PLGC-s5wU_PFRiFxj0oAcjX-irpNnuE8dH">suitable YouTube playlist</a>)</li>
-	</ul>
-	<p>Press <kbd>space</kbd> to start the game!</p>
-`;
-
-// src/entity.ts
-var Entity = class {
-  constructor(map) {
-    this.map = map;
-  }
-  _position;
-  _hp = 1;
-  get name() {
-    return "";
-  }
-  get position() {
-    return this._position;
-  }
-  set position(position) {
-    this._position = position;
-    this.map.changed(this);
-  }
-  damage(source) {
-    this._hp -= 1;
-    if (this._hp == 0) {
-      this.die(source);
-    }
-  }
-};
 
 // src/log.ts
 var node = document.querySelector("#log");
@@ -761,9 +691,53 @@ var ITEMS = [{
   ctor: Fence
 }];
 
-// src/rules.ts
-var ZOMBIE_MOVE_CHANCE = 0.5;
-var PLAYER_HP = 3;
+// src/dialogs/dialog.ts
+var Dialog = class {
+  dialog = document.createElement("dialog");
+  resolve;
+  keys = [];
+  constructor(title) {
+    let h2 = document.createElement("h2");
+    h2.textContent = title;
+    this.append(h2);
+  }
+  append(...nodes) {
+    this.dialog.append(...nodes);
+  }
+  async show() {
+    const { dialog } = this;
+    document.body.append(dialog);
+    dialog.showModal();
+    document.activeElement && document.activeElement.blur();
+    while (true) {
+      let event = await readKey();
+      if (event.key == "Escape") {
+        event.preventDefault();
+      }
+      let id = this.matchKeyEvent(event);
+      if (id !== null) {
+        dialog.close();
+        dialog.remove();
+        return id;
+      }
+    }
+  }
+  addKey(key) {
+    this.keys.push(key);
+  }
+  matchKeyEvent(event) {
+    let key = this.keys.find((key2) => {
+      if ("key" in key2 && key2.key != event.key) {
+        return false;
+      }
+      if ("code" in key2 && key2.code != event.code) {
+        return false;
+      }
+      return true;
+    });
+    return key ? key.id : null;
+  }
+};
 
 // src/dialogs/help.ts
 async function help() {
@@ -845,25 +819,26 @@ async function start() {
   dialog.addKey({ id: "", key: "Escape" });
   dialog.addKey({ id: "ok", code: "Space" });
   let info = document.createElement("p");
-  info.innerHTML = HTML2;
+  info.innerHTML = HTML;
   dialog.append(info);
   let result = await dialog.show();
   return result == "ok";
 }
-var HTML2 = `
+var HTML = `
 If you want to start the zombie invasion, press <kbd>space</kbd>.
 Zombies will slowly start spawning (you can still buy stuff).
 Otherwise, press <kbd>esc</kbd> to exit.
 `;
 
 // src/beings/player.ts
+var MAX_HP = 3;
 var Player = class extends Being {
   constructor(level) {
     super(level.map);
     this.level = level;
   }
   visual = { ch: "@", fg: "red" };
-  _hp = PLAYER_HP;
+  _hp = MAX_HP;
   _money = 10;
   items = new window.Map();
   get hp() {
@@ -872,7 +847,6 @@ var Player = class extends Being {
   async play() {
     while (true) {
       let key = await readKey();
-      console.log(key);
       let acted = await this.processKey(key);
       if (acted) {
         break;
@@ -1008,6 +982,277 @@ var MOVEMENT = {
   "Numpad3": [1, 1]
 };
 
+// src/status.ts
+var node2 = document.querySelector("#status");
+var previousValues = {};
+var DOM_ITEMS = {};
+var DOM_MISC = {};
+function init3() {
+  ITEMS.forEach((it) => DOM_ITEMS[it.id] = buildItem(it));
+  DOM_MISC["hp"] = buildHP();
+  DOM_MISC["money"] = buildMoney();
+  DOM_MISC["start"] = buildStart();
+  DOM_MISC["score"] = buildScore();
+  DOM_MISC["buy"] = buildBuy();
+  DOM_MISC["help"] = buildHelp();
+  let nodes = [
+    ...Object.values(DOM_ITEMS),
+    "\n",
+    DOM_MISC["hp"],
+    DOM_MISC["money"],
+    DOM_MISC["start"],
+    DOM_MISC["score"],
+    DOM_MISC["buy"],
+    DOM_MISC["help"]
+  ];
+  node2.replaceChildren(...nodes);
+}
+function update(level) {
+  const { player } = level;
+  ITEMS.forEach((it) => {
+    let node3 = DOM_ITEMS[it.id];
+    let count = player.getItem(it.id);
+    node3.classList.toggle("disabled", count == 0);
+    node3.querySelector(".count").textContent = count == Infinity ? "\u221E" : String(count);
+  });
+  updateHP(level);
+  updateMoney(level);
+  updateStart(level);
+  updateScore(level);
+  updateBuy(level);
+}
+function buildHP() {
+  let node3 = document.createElement("span");
+  node3.innerHTML = `Health: <span class="hp"></span>`;
+  return node3;
+}
+function updateHP(level) {
+  let current = level.player.hp;
+  let max = MAX_HP;
+  let str = "";
+  for (let i = 0; i < max; i++) {
+    str += i < current ? "\u2665" : "\u2661";
+  }
+  let node3 = DOM_MISC["hp"].querySelector(".hp");
+  node3.textContent = str;
+  animateIfChanged(node3, current);
+}
+function buildMoney() {
+  let node3 = document.createElement("span");
+  node3.innerHTML = `  Money: <span class="money"></span>`;
+  return node3;
+}
+function updateMoney(level) {
+  let node3 = DOM_MISC["money"];
+  node3.hidden = !level.buyingAllowed;
+  let span = node3.querySelector(".money");
+  let money = level.player.money;
+  span.textContent = String(money);
+  animateIfChanged(span, money);
+}
+function buildScore() {
+  let node3 = document.createElement("span");
+  node3.innerHTML = `  Score: <span class="score"></span>`;
+  return node3;
+}
+function updateScore(level) {
+  let node3 = DOM_MISC["score"];
+  node3.hidden = level.canBeStarted;
+  let span = node3.querySelector(".score");
+  let score = level.score;
+  span.textContent = String(score);
+  animateIfChanged(span, score);
+}
+function buildStart() {
+  let node3 = document.createElement("span");
+  node3.append("  ", buildKey("S", "tart the invasion"));
+  return node3;
+}
+function updateStart(level) {
+  DOM_MISC["start"].hidden = !level.canBeStarted;
+}
+function buildBuy() {
+  let node3 = document.createElement("span");
+  node3.append("  ", buildKey("B", "uy items"));
+  return node3;
+}
+function updateBuy(level) {
+  DOM_MISC["buy"].hidden = !level.buyingAllowed;
+}
+function buildHelp() {
+  let node3 = document.createElement("span");
+  node3.append("  ", buildKey("?", "Help"));
+  return node3;
+}
+function buildKey(key, text) {
+  let node3 = document.createElement("span");
+  let kbd = document.createElement("kbd");
+  kbd.textContent = key;
+  node3.append(kbd, text);
+  return node3;
+}
+function buildItem(it) {
+  let node3 = document.createElement("span");
+  let kbd = document.createElement("kbd");
+  kbd.textContent = it.key;
+  let c = document.createElement("span");
+  c.className = "count";
+  node3.append(kbd, it.short || it.ctor.Name, c, "  ");
+  return node3;
+}
+function animateIfChanged(node3, value) {
+  if (node3.className in previousValues) {
+    let previous = previousValues[node3.className];
+    if (previous != value) {
+      previousValues[node3.className] = value;
+      node3.animate(keyframes, timing);
+    }
+  } else {
+    previousValues[node3.className] = value;
+  }
+}
+var keyframes = {
+  transform: ["scale(1)", "scale(1.6)", "scale(1)"],
+  offset: [0, 0.1, 1]
+};
+var timing = {
+  duration: 600,
+  iterations: 1
+};
+
+// src/renderer/renderer.ts
+var Renderer = class {
+  node;
+  static computeTileSize(tileCount2, area, aspectRatioRange) {
+    let w = Math.floor(area[0] / tileCount2[0]);
+    let h = Math.floor(area[1] / tileCount2[1]);
+    let ar = w / h;
+    if (ar < aspectRatioRange[0]) {
+      h = Math.floor(w / aspectRatioRange[0]);
+    } else if (ar > aspectRatioRange[1]) {
+      w = Math.floor(h * aspectRatioRange[1]);
+    }
+    return [w, h];
+  }
+};
+
+// src/renderer/canvas.ts
+var DPR = devicePixelRatio > 1 ? 2 : 1;
+var Canvas = class extends Renderer {
+  node = document.createElement("canvas");
+  ctx = this.node.getContext("2d");
+  tileSize;
+  constructor() {
+    super();
+    this.node.className = "renderer canvas";
+  }
+  configure(tileCount2, tileSize2) {
+    const { node: node3, ctx } = this;
+    node3.width = tileCount2[0] * tileSize2[0] * DPR;
+    node3.height = tileCount2[1] * tileSize2[1] * DPR;
+    ctx.restore();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${tileSize2[1]}px input`;
+    ctx.scale(DPR, DPR);
+    this.tileSize = tileSize2;
+  }
+  draw(x, y, drawables) {
+    let visuals = drawables.map((d) => d.visual);
+    let visual = resolveVisual(visuals);
+    this.drawVisual(x, y, visual);
+  }
+  drawVisual(x, y, visual) {
+    const { ctx, tileSize: tileSize2 } = this;
+    ctx.fillStyle = visual.bg;
+    ctx.fillRect(x * tileSize2[0], y * tileSize2[1], tileSize2[0], tileSize2[1]);
+    if (visual.ch) {
+      ctx.fillStyle = visual.fg;
+      ctx.fillText(visual.ch, (x + 0.5) * tileSize2[0], (y + 0.5) * tileSize2[1] + 1);
+    }
+  }
+  remove() {
+  }
+};
+function resolveVisual(visuals) {
+  let visual = {
+    bg: "black",
+    fg: "gray",
+    ch: ""
+  };
+  visuals.forEach((v) => Object.assign(visual, v));
+  return visual;
+}
+
+// src/renderer/dom.ts
+var DOM = class extends Renderer {
+  node = document.createElement("div");
+  nodes = /* @__PURE__ */ new Map();
+  constructor() {
+    super();
+    this.node.className = "renderer dom";
+  }
+  configure() {
+  }
+  draw(x, y, drawables) {
+    const { node: node3, nodes } = this;
+    drawables.forEach((d, i) => {
+      let dnode = nodes.get(d);
+      if (!dnode) {
+        dnode = document.createElement("div");
+        node3.append(dnode);
+        nodes.set(d, dnode);
+      }
+      dnode.style.setProperty("--x", String(x));
+      dnode.style.setProperty("--y", String(y));
+      dnode.style.zIndex = String(i + 1);
+      const { visual } = d;
+      if (visual.bg) {
+        dnode.style.backgroundColor = visual.bg;
+      }
+      if (visual.fg) {
+        dnode.style.color = visual.fg;
+      }
+      if (visual.ch) {
+        dnode.textContent = visual.ch;
+      }
+    });
+  }
+  remove(drawable) {
+    const { nodes } = this;
+    let dnode = nodes.get(drawable);
+    dnode && dnode.remove();
+  }
+};
+
+// src/renderer/combo.ts
+var Combo = class extends Renderer {
+  node = document.createElement("div");
+  renderers;
+  static computeTileSize(tileCount2, area, aspectRatioRange) {
+    let halfArea = [area[0] / 2, area[1]];
+    let fakeTileCount = [tileCount2[0] * 2 + 1, tileCount2[1]];
+    return super.computeTileSize(fakeTileCount, area, aspectRatioRange);
+  }
+  constructor() {
+    super();
+    const { node: node3 } = this;
+    node3.className = "renderer combo";
+    let renderers = [Canvas, DOM].map((r) => new r());
+    node3.append(...renderers.map((r) => r.node));
+    this.renderers = renderers;
+  }
+  draw(x, y, drawables) {
+    this.renderers.forEach((r) => r.draw(x, y, drawables));
+  }
+  remove(drawable) {
+    this.renderers.forEach((r) => r.remove(drawable));
+  }
+  configure(tileCount2, tileSize2) {
+    this.renderers.forEach((r) => r.configure(tileCount2, tileSize2));
+  }
+};
+
 // src/zombies.ts
 var Zombies = class {
   constructor(level) {
@@ -1018,16 +1263,18 @@ var Zombies = class {
   spawnPotential = 1;
   async play() {
     const { zombies, level } = this;
-    this.rounds++;
-    let activeZombies = zombies.filter((_) => Math.random() > ZOMBIE_MOVE_CHANCE);
+    let activeZombies = zombies.filter((_) => Math.random() > level.zombieMoveChance);
     for (let i = 0; i < activeZombies.length; i++) {
       await activeZombies[i].play(level.player);
     }
-    let spawnPotential = this.updateSpawnPotential();
-    if (spawnPotential >= 1) {
-      let amount = Math.floor(this.spawnPotential);
-      this.spawnPotential -= amount;
-      this.spawn(amount);
+    if (level.started) {
+      this.rounds++;
+      let spawnPotential = this.updateSpawnPotential();
+      if (spawnPotential >= 1) {
+        let amount = Math.floor(this.spawnPotential);
+        this.spawnPotential -= amount;
+        this.spawn(amount);
+      }
     }
   }
   remove(zombie) {
@@ -1215,97 +1462,6 @@ var House = class extends Item {
   }
 };
 
-// src/status.ts
-var node2 = document.querySelector("#status");
-var previousValues = {};
-function update(level) {
-  const { player } = level;
-  let items = ITEMS.map((it) => buildItem(it, player));
-  let status = [
-    "Health: ",
-    buildHP(player.hp, PLAYER_HP)
-  ];
-  if (level.buyingAllowed) {
-    status.push("  ", "Money: ", buildMoney(player.money));
-  }
-  if (level.canBeStarted) {
-    status.push("  ", buildKey("S", "tart the invasion"));
-  } else {
-    status.push("  ", "Score: ", buildScore(level.score));
-  }
-  if (level.buyingAllowed) {
-    status.push("  ", buildKey("B", "uy items"));
-  }
-  status.push(
-    "  ",
-    buildKey("?", "Help")
-  );
-  node2.replaceChildren(...items, "\n", ...status);
-}
-function buildHP(curent, max) {
-  let node3 = document.createElement("span");
-  node3.className = "hp";
-  let str = "";
-  for (let i = 0; i < max; i++) {
-    str += i < curent ? "\u2665" : "\u2661";
-  }
-  node3.textContent = str;
-  animateIfChanged(node3, curent);
-  return node3;
-}
-function buildMoney(money) {
-  let node3 = document.createElement("span");
-  node3.className = "money";
-  node3.textContent = String(money);
-  animateIfChanged(node3, money);
-  return node3;
-}
-function buildScore(score) {
-  let node3 = document.createElement("span");
-  node3.className = "score";
-  node3.textContent = String(score);
-  animateIfChanged(node3, score);
-  return node3;
-}
-function buildKey(key, text) {
-  let node3 = document.createElement("span");
-  let kbd = document.createElement("kbd");
-  kbd.textContent = key;
-  node3.append(kbd, text);
-  return node3;
-}
-function buildItem(it, player) {
-  let node3 = document.createElement("span");
-  let count = player.getItem(it.id);
-  node3.classList.toggle("disabled", count == 0);
-  let kbd = document.createElement("kbd");
-  kbd.textContent = it.key;
-  let c = document.createElement("span");
-  c.className = "count";
-  c.textContent = count == Infinity ? "\u221E" : String(count);
-  node3.append(kbd, it.short || it.ctor.Name, c, "  ");
-  return node3;
-}
-function animateIfChanged(node3, value) {
-  if (node3.className in previousValues) {
-    let previous = previousValues[node3.className];
-    if (previous != value) {
-      previousValues[node3.className] = value;
-      node3.animate(keyframes, timing);
-    }
-  } else {
-    previousValues[node3.className] = value;
-  }
-}
-var keyframes = {
-  transform: ["scale(1)", "scale(1.6)", "scale(1)"],
-  offset: [0, 0.1, 1]
-};
-var timing = {
-  duration: 600,
-  iterations: 1
-};
-
 // src/dialogs/gameover.ts
 async function gameOver(level) {
   let dialog = new Dialog("Game over!");
@@ -1322,6 +1478,7 @@ async function gameOver(level) {
 }
 
 // src/levels/level.ts
+var ZOMBIE_MOVE_CHANCE = 0.5;
 var Level = class {
   static Name = "???";
   static description = "???";
@@ -1330,8 +1487,9 @@ var Level = class {
   map;
   // chce znat player a zombies
   zombies;
-  started = false;
+  _started = false;
   _score = 0;
+  _rounds = 0;
   constructor(renderer) {
     let map = new Map2(tileCount[0], tileCount[1], renderer);
     this.map = map;
@@ -1349,19 +1507,29 @@ var Level = class {
     ].forEach((h) => map.addItem(h));
     this.updateStatus();
   }
+  get zombieMoveChance() {
+    return ZOMBIE_MOVE_CHANCE;
+  }
   get buyingAllowed() {
     return true;
   }
   get canBeStarted() {
-    return !this.started;
+    return !this._started;
+  }
+  get started() {
+    return this._started;
   }
   start() {
-    this.started = true;
+    this._started = true;
     this.updateStatus();
   }
   updateStatus() {
     update(this);
   }
+  get rounds() {
+    return this._rounds;
+  }
+  // chce znat status
   get score() {
     return this._score;
   }
@@ -1373,10 +1541,10 @@ var Level = class {
   async play() {
     const { player, zombies } = this;
     while (!this.done) {
+      this._rounds++;
+      this.updateStatus();
       await player.play();
-      if (this.started) {
-        await zombies.play();
-      }
+      await zombies.play();
       await flush();
     }
     await gameOver(this);
@@ -1386,192 +1554,10 @@ var Level = class {
   }
 };
 
-// src/levels/tutorial.ts
-var Tutorial = class extends Level {
-  static Name = "Tutorial";
-  static description = "basic controls and concepts";
-};
-
 // src/levels/regular.ts
 var Regular = class extends Level {
   static Name = "Regular";
-};
-
-// src/levels/sandbox.ts
-var Sandbox = class extends Level {
-  static Name = "Sandbox";
-  static description = "unlimited resources, unlimited carnage";
-  constructor(renderer) {
-    super(renderer);
-    const { player } = this;
-    player.setItem("rake", Infinity);
-    player.setItem("barricade", Infinity);
-    player.setItem("trap", Infinity);
-    player.setItem("mine", Infinity);
-    player.setItem("bazooka", Infinity);
-    player.setItem("wire", Infinity);
-    player.setItem("fence", Infinity);
-  }
-  get buyingAllowed() {
-    return false;
-  }
-};
-
-// src/dialogs/levels.ts
-var Ctors = [Tutorial, Regular, Level, Sandbox];
-async function pickLevel() {
-  let dialog = new Dialog("Game mode selection");
-  let p = document.createElement("p");
-  p.textContent = "Please pick a game mode to use by pressing the corresponding number key.";
-  dialog.append(p);
-  let dl = document.createElement("dl");
-  dialog.append(dl);
-  Ctors.forEach((Ctor, i) => {
-    let dt = document.createElement("dt");
-    let kbd = document.createElement("kbd");
-    kbd.textContent = String(i + 1);
-    dt.append(kbd, " ", Ctor.Name);
-    let dd = document.createElement("dd");
-    dd.textContent = Ctor.description;
-    dl.append(dt, dd);
-    dialog.addKey({ id: Ctor.Name, code: `Numpad${i + 1}` });
-    dialog.addKey({ id: Ctor.Name, code: `Digit${i + 1}` });
-  });
-  let id = await dialog.show();
-  return Ctors.find((Ctor) => Ctor.Name == id);
-}
-
-// src/renderer/renderer.ts
-var Renderer = class {
-  node;
-  static computeTileSize(tileCount2, area, aspectRatioRange) {
-    let w = Math.floor(area[0] / tileCount2[0]);
-    let h = Math.floor(area[1] / tileCount2[1]);
-    let ar = w / h;
-    if (ar < aspectRatioRange[0]) {
-      h = Math.floor(w / aspectRatioRange[0]);
-    } else if (ar > aspectRatioRange[1]) {
-      w = Math.floor(h * aspectRatioRange[1]);
-    }
-    return [w, h];
-  }
-};
-
-// src/renderer/canvas.ts
-var DPR = devicePixelRatio > 1 ? 2 : 1;
-var Canvas = class extends Renderer {
-  node = document.createElement("canvas");
-  ctx = this.node.getContext("2d");
-  tileSize;
-  constructor() {
-    super();
-    this.node.className = "renderer canvas";
-  }
-  configure(tileCount2, tileSize2) {
-    const { node: node3, ctx } = this;
-    node3.width = tileCount2[0] * tileSize2[0] * DPR;
-    node3.height = tileCount2[1] * tileSize2[1] * DPR;
-    ctx.restore();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = `bold ${tileSize2[1]}px input`;
-    ctx.scale(DPR, DPR);
-    this.tileSize = tileSize2;
-  }
-  draw(x, y, drawables) {
-    let visuals = drawables.map((d) => d.visual);
-    let visual = resolveVisual(visuals);
-    this.drawVisual(x, y, visual);
-  }
-  drawVisual(x, y, visual) {
-    const { ctx, tileSize: tileSize2 } = this;
-    ctx.fillStyle = visual.bg;
-    ctx.fillRect(x * tileSize2[0], y * tileSize2[1], tileSize2[0], tileSize2[1]);
-    if (visual.ch) {
-      ctx.fillStyle = visual.fg;
-      ctx.fillText(visual.ch, (x + 0.5) * tileSize2[0], (y + 0.5) * tileSize2[1] + 1);
-    }
-  }
-  remove() {
-  }
-};
-function resolveVisual(visuals) {
-  let visual = {
-    bg: "black",
-    fg: "gray",
-    ch: ""
-  };
-  visuals.forEach((v) => Object.assign(visual, v));
-  return visual;
-}
-
-// src/renderer/dom.ts
-var DOM = class extends Renderer {
-  node = document.createElement("div");
-  nodes = /* @__PURE__ */ new Map();
-  constructor() {
-    super();
-    this.node.className = "renderer dom";
-  }
-  configure() {
-  }
-  draw(x, y, drawables) {
-    const { node: node3, nodes } = this;
-    drawables.forEach((d, i) => {
-      let dnode = nodes.get(d);
-      if (!dnode) {
-        dnode = document.createElement("div");
-        node3.append(dnode);
-        nodes.set(d, dnode);
-      }
-      dnode.style.setProperty("--x", String(x));
-      dnode.style.setProperty("--y", String(y));
-      dnode.style.zIndex = String(i + 1);
-      const { visual } = d;
-      if (visual.bg) {
-        dnode.style.backgroundColor = visual.bg;
-      }
-      if (visual.fg) {
-        dnode.style.color = visual.fg;
-      }
-      if (visual.ch) {
-        dnode.textContent = visual.ch;
-      }
-    });
-  }
-  remove(drawable) {
-    const { nodes } = this;
-    let dnode = nodes.get(drawable);
-    dnode && dnode.remove();
-  }
-};
-
-// src/renderer/combo.ts
-var Combo = class extends Renderer {
-  node = document.createElement("div");
-  renderers;
-  static computeTileSize(tileCount2, area, aspectRatioRange) {
-    let halfArea = [area[0] / 2, area[1]];
-    let fakeTileCount = [tileCount2[0] * 2 + 1, tileCount2[1]];
-    return super.computeTileSize(fakeTileCount, area, aspectRatioRange);
-  }
-  constructor() {
-    super();
-    const { node: node3 } = this;
-    node3.className = "renderer combo";
-    let renderers = [Canvas, DOM].map((r) => new r());
-    node3.append(...renderers.map((r) => r.node));
-    this.renderers = renderers;
-  }
-  draw(x, y, drawables) {
-    this.renderers.forEach((r) => r.draw(x, y, drawables));
-  }
-  remove(drawable) {
-    this.renderers.forEach((r) => r.remove(drawable));
-  }
-  configure(tileCount2, tileSize2) {
-    this.renderers.forEach((r) => r.configure(tileCount2, tileSize2));
-  }
+  static description = "Survive for as long as possible. Limited starting resources, unlimited zombies.";
 };
 
 // src/index.ts
@@ -1579,11 +1565,11 @@ async function run() {
   let RCtor2 = Combo;
   await init([43, 30], RCtor2);
   init2();
+  init3();
   let renderer = new RCtor2();
   document.querySelector("main").prepend(renderer.node);
-  await welcome();
   while (true) {
-    let Ctor = await pickLevel();
+    let Ctor = Regular;
     await new Ctor(renderer).play();
   }
 }

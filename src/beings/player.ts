@@ -3,7 +3,6 @@ import Being from "./being.js";
 import Level from "../levels/level.js";
 import { ITEMS } from "../items/db.js";
 import * as keyboard from "../keyboard.js";
-import * as rules from "../rules.js";
 import * as log from "../log.js";
 import help from "../dialogs/help.js";
 import buy from "../dialogs/buy.js";
@@ -11,9 +10,11 @@ import start from "../dialogs/start.js";
 import * as sfx from "../sfx.js";
 
 
+export const MAX_HP = 3;
+
 export default class Player extends Being {
 	readonly visual = {ch:"@", fg:"red"};
-	protected _hp = rules.PLAYER_HP;
+	protected _hp = MAX_HP;
 	protected _money = 10;
 	readonly items = new window.Map<string, number>();
 
@@ -26,7 +27,7 @@ export default class Player extends Being {
 	async play() {
 		while (true) {
 			let key = await keyboard.readKey();
-			console.log(key);
+//			console.log(key);
 
 			let acted = await this.processKey(key);
 			if (acted) { break; }
