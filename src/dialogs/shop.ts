@@ -3,11 +3,19 @@ import Player from "../beings/player.js";
 import { ITEMS, ItemTemplate } from "../items/db.js"
 
 
-export default async function buy(player: Player) {
-	while (true) {
-		let dialog = new Dialog("Buy items");
+interface Options {
+	only: string;
+}
 
-		let table = buildItemTable(player, dialog);
+export default async function shop(player: Player, options?: Options) {
+	while (true) {
+		let dialog = new Dialog("Item shop");
+
+		let p = document.createElement("p");
+		p.innerHTML = `You can buy anti-zombie stuff here. No refunds, no returns.<br/>You have <span class="money">${player.money}</span> right now.</p>`;
+		dialog.append(p);
+
+		let table = buildItemTable(player, dialog, options);
 		dialog.append(table);
 
 		let canBuySomething = ITEMS.some(it => it.price <= player.money);
@@ -29,17 +37,19 @@ export default async function buy(player: Player) {
 	}
 }
 
-function buildItemTable(player: Player, dialog: Dialog) {
+function buildItemTable(player: Player, dialog: Dialog, options?: Options) {
 	let table = document.createElement("table");
 	table.innerHTML = TABLE;
-	let rows = ITEMS.map(def => buildItemRow(def, player, dialog));
+	let rows = ITEMS.map(def => buildItemRow(def, player, dialog, options));
 	table.tBodies[0].append(...rows);
 	return table;
 }
 
-function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog) {
+function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog, options?: Options) {
 	let row = document.createElement("tr");
 	let disabled = (item.price > player.money);
+	if (options && options.only != item.id) { disabled = true; }
+
 	if (!item.price)  { disabled = true; }
 	row.classList.toggle("disabled", disabled);
 
@@ -52,12 +62,15 @@ function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog) {
 	let price = document.createElement("span");
 	price.className = "money";
 	price.textContent = String(item.price);
-	row.insertCell().append(price, " for ", String(item.amount));
+	let count = document.createElement("span");
+	count.className = "count";
+	count.textContent = String(item.amount);
+	row.insertCell().append(count, " for ", price);
 
 	row.insertCell().textContent = item.ctor.description;
 
-	let count = player.getItem(item.id)
-	row.insertCell().textContent = (count == Infinity ? "∞" : String(count));
+	let have = player.getItem(item.id)
+	row.insertCell().textContent = (have == Infinity ? "∞" : String(have));
 
 	if (!disabled) {
 		dialog.addKey({id: item.id, code: `Numpad${item.key}`});

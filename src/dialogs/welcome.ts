@@ -6,7 +6,7 @@ export default function welcome() {
 
 	let node = document.createElement("div");
 	node.innerHTML = HTML;
-	dialog.append(...node.childNodes);
+	dialog.append(node);
 
 	dialog.addKey({id: "", code: "Space"});
 

@@ -17,6 +17,11 @@ String.prototype.article = function() {
   let a = this.match(/^[aeiou]/i) ? "an" : "a";
   return `${a} ${this}`;
 };
+Array.prototype.distance = function(other) {
+  let dx = Math.abs(this[0] - other[0]);
+  let dy = Math.abs(this[1] - other[1]);
+  return Math.max(dx, dy);
+};
 
 // src/metrics.ts
 var tileCount;
@@ -74,7 +79,8 @@ var DB = {
   "fence": 2,
   "bazooka": 1,
   "mine": 1,
-  "game-over": 1
+  "game-over": 1,
+  "ping": 1
 };
 var audio = {};
 function init2() {
@@ -410,8 +416,8 @@ var Zombie = class extends Being {
       let type = being == player ? "player" : "invalid";
       return { type };
     }
-    let currentDistance = distance(position, player.position);
-    let dist = distance([x, y], player.position);
+    let currentDistance = player.position.distance(position);
+    let dist = player.position.distance([x, y]);
     if (dist > currentDistance) {
       return { type: "invalid" };
     }
@@ -443,11 +449,6 @@ function pickBestDistanceResult(results) {
   let distances = results.map((r) => r.dist);
   let best = Math.min(...distances);
   return results.filter((r) => r.dist == best).random();
-}
-function distance(pos1, pos2) {
-  var dx = Math.abs(pos1[0] - pos2[0]);
-  var dy = Math.abs(pos1[1] - pos2[1]);
-  return Math.max(dx, dy);
 }
 
 // src/explosion.ts
@@ -739,80 +740,6 @@ var Dialog = class {
   }
 };
 
-// src/dialogs/help.ts
-async function help() {
-  let dialog = new Dialog("Help!");
-  dialog.addKey({ id: "", key: "Escape" });
-  dialog.addKey({ id: "one", key: "1" });
-  let result = await dialog.show();
-}
-
-// src/dialogs/buy.ts
-async function buy(player) {
-  while (true) {
-    let dialog = new Dialog("Buy items");
-    let table = buildItemTable(player, dialog);
-    dialog.append(table);
-    let canBuySomething = ITEMS.some((it) => it.price <= player.money);
-    let info = document.createElement("p");
-    info.innerHTML = `${canBuySomething ? "Earn more money by killing zombies." : "You have no money! Earn some by killing zombies."} Press <kbd>esc</kbd> to exit.`;
-    dialog.addKey({ id: "", key: "Escape" });
-    dialog.append(info);
-    let result = await dialog.show();
-    if (result == "") {
-      break;
-    } else {
-      let it = ITEMS.find((it2) => it2.id == result);
-      let price = it.price;
-      player.setItem(result, player.getItem(result) + it.amount);
-      player.money -= price;
-    }
-  }
-}
-function buildItemTable(player, dialog) {
-  let table = document.createElement("table");
-  table.innerHTML = TABLE;
-  let rows = ITEMS.map((def) => buildItemRow(def, player, dialog));
-  table.tBodies[0].append(...rows);
-  return table;
-}
-function buildItemRow(item, player, dialog) {
-  let row = document.createElement("tr");
-  let disabled = item.price > player.money;
-  if (!item.price) {
-    disabled = true;
-  }
-  row.classList.toggle("disabled", disabled);
-  let kbd = document.createElement("kbd");
-  kbd.textContent = item.key;
-  row.insertCell().append(kbd);
-  row.insertCell().textContent = item.ctor.Name;
-  let price = document.createElement("span");
-  price.className = "money";
-  price.textContent = String(item.price);
-  row.insertCell().append(price, " for ", String(item.amount));
-  row.insertCell().textContent = item.ctor.description;
-  let count = player.getItem(item.id);
-  row.insertCell().textContent = count == Infinity ? "\u221E" : String(count);
-  if (!disabled) {
-    dialog.addKey({ id: item.id, code: `Numpad${item.key}` });
-    dialog.addKey({ id: item.id, code: `Digit${item.key}` });
-  }
-  return row;
-}
-var TABLE = `
-<thead>
-	<tr>
-		<th>Key</th>
-		<th>Item</th>
-		<th>Price</th>
-		<th></th>
-		<th>Have</th>
-	</tr>
-</thead>
-<tbody></tbody>
-`;
-
 // src/dialogs/start.ts
 async function start() {
   let dialog = new Dialog("Start the zombie invasion?");
@@ -826,8 +753,9 @@ async function start() {
 }
 var HTML = `
 If you want to start the zombie invasion, press <kbd>space</kbd>.
-Zombies will slowly start spawning (you can still buy stuff).
-Otherwise, press <kbd>esc</kbd> to exit.
+Zombies will slowly start spawning and wandering around. (Item shop is still available in non-snadbox game modes).
+<br/><br/>
+Press <kbd>esc</kbd> to return back to preparations.
 `;
 
 // src/beings/player.ts
@@ -836,10 +764,11 @@ var Player = class extends Being {
   constructor(level) {
     super(level.map);
     this.level = level;
+    this._money = level.initialMoney;
   }
   visual = { ch: "@", fg: "red" };
   _hp = MAX_HP;
-  _money = 10;
+  _money;
   items = new window.Map();
   get hp() {
     return this._hp;
@@ -870,6 +799,9 @@ var Player = class extends Being {
   async processKey(key) {
     const { level } = this;
     clear();
+    if (isIdle(key)) {
+      return true;
+    }
     if (key.code in MOVEMENT) {
       let diff = MOVEMENT[key.code];
       return this.moveBy(...diff);
@@ -878,11 +810,11 @@ var Player = class extends Being {
       let num = key.code.match(/\d/);
       return num ? this.tryItem(num[0]) : false;
     }
-    if (key.key == "b" && level.buyingAllowed) {
-      await buy(this);
+    if (key.key == "s" && level.isAllowed("shop")) {
+      await level.shop();
       return false;
     }
-    if (key.key == "s" && level.canBeStarted) {
+    if (key.key == "s" && level.isAllowed("start")) {
       let result = await start();
       if (result) {
         level.start();
@@ -892,7 +824,7 @@ var Player = class extends Being {
       }
     }
     if (key.key == "?") {
-      await help();
+      await level.help();
       return false;
     }
     return false;
@@ -967,19 +899,30 @@ async function waitForDirection(prefix) {
     }
   }
 }
+function isIdle(key) {
+  return key.code == "Numpad5" || key.code == "Space" || key.key == ".";
+}
 var MOVEMENT = {
   "Numpad7": [-1, -1],
-  "ArrowDown": [0, 1],
-  "Numpad2": [0, 1],
-  "Numpad9": [1, -1],
-  "ArrowLeft": [-1, 0],
-  "Numpad4": [-1, 0],
-  "ArrowRight": [1, 0],
-  "Numpad6": [1, 0],
+  "KeyY": [-1, -1],
   "ArrowUp": [0, -1],
   "Numpad8": [0, -1],
+  "KeyK": [0, -1],
+  "Numpad9": [1, -1],
+  "KeyU": [1, -1],
+  "ArrowLeft": [-1, 0],
+  "Numpad4": [-1, 0],
+  "KeyH": [-1, 0],
+  "ArrowRight": [1, 0],
+  "Numpad6": [1, 0],
+  "KeyL": [1, 0],
   "Numpad1": [-1, 1],
-  "Numpad3": [1, 1]
+  "KeyB": [-1, 1],
+  "ArrowDown": [0, 1],
+  "Numpad2": [0, 1],
+  "KeyJ": [0, 1],
+  "Numpad3": [1, 1],
+  "KeyN": [1, 1]
 };
 
 // src/status.ts
@@ -993,7 +936,7 @@ function init3() {
   DOM_MISC["money"] = buildMoney();
   DOM_MISC["start"] = buildStart();
   DOM_MISC["score"] = buildScore();
-  DOM_MISC["buy"] = buildBuy();
+  DOM_MISC["shop"] = buildShop();
   DOM_MISC["help"] = buildHelp();
   let nodes = [
     ...Object.values(DOM_ITEMS),
@@ -1002,7 +945,7 @@ function init3() {
     DOM_MISC["money"],
     DOM_MISC["start"],
     DOM_MISC["score"],
-    DOM_MISC["buy"],
+    DOM_MISC["shop"],
     DOM_MISC["help"]
   ];
   node2.replaceChildren(...nodes);
@@ -1019,7 +962,7 @@ function update(level) {
   updateMoney(level);
   updateStart(level);
   updateScore(level);
-  updateBuy(level);
+  updateShop(level);
 }
 function buildHP() {
   let node3 = document.createElement("span");
@@ -1044,7 +987,7 @@ function buildMoney() {
 }
 function updateMoney(level) {
   let node3 = DOM_MISC["money"];
-  node3.hidden = !level.buyingAllowed;
+  node3.hidden = !level.isAllowed("shop");
   let span = node3.querySelector(".money");
   let money = level.player.money;
   span.textContent = String(money);
@@ -1057,7 +1000,7 @@ function buildScore() {
 }
 function updateScore(level) {
   let node3 = DOM_MISC["score"];
-  node3.hidden = level.canBeStarted;
+  node3.hidden = !level.isAllowed("score");
   let span = node3.querySelector(".score");
   let score = level.score;
   span.textContent = String(score);
@@ -1069,15 +1012,15 @@ function buildStart() {
   return node3;
 }
 function updateStart(level) {
-  DOM_MISC["start"].hidden = !level.canBeStarted;
+  DOM_MISC["start"].hidden = !level.isAllowed("start");
 }
-function buildBuy() {
+function buildShop() {
   let node3 = document.createElement("span");
-  node3.append("  ", buildKey("B", "uy items"));
+  node3.append("  ", buildKey("S", "hop"));
   return node3;
 }
-function updateBuy(level) {
-  DOM_MISC["buy"].hidden = !level.buyingAllowed;
+function updateShop(level) {
+  DOM_MISC["shop"].hidden = !level.isAllowed("shop");
 }
 function buildHelp() {
   let node3 = document.createElement("span");
@@ -1267,7 +1210,7 @@ var Zombies = class {
     for (let i = 0; i < activeZombies.length; i++) {
       await activeZombies[i].play(level.player);
     }
-    if (level.started) {
+    if (level.isAllowed("spawn")) {
       this.rounds++;
       let spawnPotential = this.updateSpawnPotential();
       if (spawnPotential >= 1) {
@@ -1281,17 +1224,21 @@ var Zombies = class {
     this.level.increaseScore();
     this.zombies = this.zombies.filter((z) => z != zombie);
   }
-  spawn(amount) {
-    const { zombies, level } = this;
+  spawnAt(x, y) {
+    const { level, zombies } = this;
     const { map } = level;
+    let zombie = new Zombie(map, this);
+    zombie.position = [x, y];
+    zombies.push(zombie);
+    map.addBeing(zombie);
+  }
+  spawn(amount) {
+    const { map } = this.level;
     play("zombie-spawn");
-    let corners = getCorners(map);
+    let corners = map.getCorners();
     for (let i = 0; i < amount; i++) {
       let corner = corners.random();
-      let zombie = new Zombie(map, this);
-      zombie.position = corner.slice();
-      zombies.push(zombie);
-      map.addBeing(zombie);
+      this.spawnAt(corner[0], corner[1]);
     }
   }
   updateSpawnPotential() {
@@ -1299,15 +1246,6 @@ var Zombies = class {
     return this.spawnPotential;
   }
 };
-function getCorners(map) {
-  const { width, height } = map;
-  return [
-    [0, 0],
-    [width - 1, 0],
-    [width - 1, height - 1],
-    [0, height - 1]
-  ];
-}
 
 // src/background.ts
 var seed = -Math.random() * 100;
@@ -1364,6 +1302,15 @@ var Map2 = class {
         this.redraw([i, j]);
       }
     }
+  }
+  getCorners() {
+    const { width, height } = this;
+    return [
+      [0, 0],
+      [width - 1, 0],
+      [0, height - 1],
+      [width - 1, height - 1]
+    ];
   }
   isPositionValid(x, y) {
     const { width, height } = this;
@@ -1451,31 +1398,105 @@ var Map2 = class {
   }
 };
 
-// src/items/house.ts
-var House = class extends Item {
-  visual = { ch: "#", fg: "saddlebrown", bg: "black" };
-  blocks = true;
-  _hp = 3;
-  constructor(map, x, y) {
-    super(map);
-    this._position = [x, y];
-  }
-};
-
 // src/dialogs/gameover.ts
 async function gameOver(level) {
   let dialog = new Dialog("Game over!");
   let p1 = document.createElement("p");
-  p1.innerHTML = "Game over! The zombies have eaten your brains.";
+  p1.textContent = level.player.hp > 0 ? ALIVE : DEAD;
   let p2 = document.createElement("p");
   let Ctor = level.constructor;
-  p2.innerHTML = `Your score (${Ctor.Name}): <span class="score">${level.score}</span>`;
+  p2.innerHTML = `Your score (${Ctor.Name}): survived for <strong>${level.rounds}</strong> rounds, killed <span class="score">${level.score}</span> zombies.`;
   let p3 = document.createElement("p");
   p3.innerHTML = `Press <kbd>space</kbd> to return to the main menu.`;
   dialog.append(p1, p2, p3);
   dialog.addKey({ id: "", code: "Space" });
   await dialog.show();
 }
+var ALIVE = `The game is over!`;
+var DEAD = `${ALIVE} The zombies have eaten your brains.`;
+
+// src/dialogs/help.ts
+async function help() {
+  let dialog = new Dialog("Help!");
+  dialog.addKey({ id: "", key: "Escape" });
+  dialog.addKey({ id: "one", key: "1" });
+  let result = await dialog.show();
+}
+
+// src/dialogs/shop.ts
+async function shop(player, options) {
+  while (true) {
+    let dialog = new Dialog("Item shop");
+    let p = document.createElement("p");
+    p.innerHTML = `You can buy anti-zombie stuff here. No refunds, no returns.<br/>You have <span class="money">${player.money}</span> right now.</p>`;
+    dialog.append(p);
+    let table = buildItemTable(player, dialog, options);
+    dialog.append(table);
+    let canBuySomething = ITEMS.some((it) => it.price <= player.money);
+    let info = document.createElement("p");
+    info.innerHTML = `${canBuySomething ? "Earn more money by killing zombies." : "You have no money! Earn some by killing zombies."} Press <kbd>esc</kbd> to exit.`;
+    dialog.addKey({ id: "", key: "Escape" });
+    dialog.append(info);
+    let result = await dialog.show();
+    if (result == "") {
+      break;
+    } else {
+      let it = ITEMS.find((it2) => it2.id == result);
+      let price = it.price;
+      player.setItem(result, player.getItem(result) + it.amount);
+      player.money -= price;
+    }
+  }
+}
+function buildItemTable(player, dialog, options) {
+  let table = document.createElement("table");
+  table.innerHTML = TABLE;
+  let rows = ITEMS.map((def) => buildItemRow(def, player, dialog, options));
+  table.tBodies[0].append(...rows);
+  return table;
+}
+function buildItemRow(item, player, dialog, options) {
+  let row = document.createElement("tr");
+  let disabled = item.price > player.money;
+  if (options && options.only != item.id) {
+    disabled = true;
+  }
+  if (!item.price) {
+    disabled = true;
+  }
+  row.classList.toggle("disabled", disabled);
+  let kbd = document.createElement("kbd");
+  kbd.textContent = item.key;
+  row.insertCell().append(kbd);
+  row.insertCell().textContent = item.ctor.Name;
+  let price = document.createElement("span");
+  price.className = "money";
+  price.textContent = String(item.price);
+  let count = document.createElement("span");
+  count.className = "count";
+  count.textContent = String(item.amount);
+  row.insertCell().append(count, " for ", price);
+  row.insertCell().textContent = item.ctor.description;
+  let have = player.getItem(item.id);
+  row.insertCell().textContent = have == Infinity ? "\u221E" : String(have);
+  if (!disabled) {
+    dialog.addKey({ id: item.id, code: `Numpad${item.key}` });
+    dialog.addKey({ id: item.id, code: `Digit${item.key}` });
+  }
+  return row;
+}
+var TABLE = `
+<thead>
+	<tr>
+		<th>Key</th>
+		<th>Item</th>
+		<th>Price</th>
+		<th></th>
+		<th>Have</th>
+	</tr>
+</thead>
+<tbody></tbody>
+`;
 
 // src/levels/level.ts
 var ZOMBIE_MOVE_CHANCE = 0.5;
@@ -1497,34 +1518,25 @@ var Level = class {
     this.zombies = zombies;
     let player = new Player(this);
     this.player = player;
-    player.position = [15, 15];
-    map.addBeing(player);
-    [
-      new House(map, 10, 10),
-      new House(map, 11, 10),
-      new House(map, 12, 10),
-      new House(map, 12, 11)
-    ].forEach((h) => map.addItem(h));
     this.updateStatus();
   }
   get zombieMoveChance() {
     return ZOMBIE_MOVE_CHANCE;
   }
-  get buyingAllowed() {
-    return true;
+  isAllowed(feature) {
+    switch (feature) {
+      case "shop":
+        return true;
+      case "start":
+        return !this._started;
+      case "score":
+        return this._started;
+      case "spawn":
+        return this._started;
+    }
   }
-  get canBeStarted() {
-    return !this._started;
-  }
-  get started() {
-    return this._started;
-  }
-  start() {
-    this._started = true;
-    this.updateStatus();
-  }
-  updateStatus() {
-    update(this);
+  get initialMoney() {
+    return 0;
   }
   get rounds() {
     return this._rounds;
@@ -1534,31 +1546,203 @@ var Level = class {
     return this._score;
   }
   // chce znat gameOver a status
+  get done() {
+    return this.player.hp <= 0;
+  }
+  shop() {
+    return shop(this.player);
+  }
+  help() {
+    return help();
+  }
   increaseScore() {
     this._score++;
     this.player.money++;
   }
+  start() {
+    this._started = true;
+    this.updateStatus();
+  }
+  updateStatus() {
+    update(this);
+  }
   async play() {
-    const { player, zombies } = this;
     while (!this.done) {
-      this._rounds++;
-      this.updateStatus();
-      await player.play();
-      await zombies.play();
-      await flush();
+      await this.playRound();
     }
     await gameOver(this);
   }
-  get done() {
-    return this.player.hp <= 0;
+  async playRound() {
+    const { player, zombies } = this;
+    this._rounds++;
+    this.updateStatus();
+    await player.play();
+    await zombies.play();
+    await flush();
   }
 };
 
-// src/levels/regular.ts
-var Regular = class extends Level {
-  static Name = "Regular";
-  static description = "Survive for as long as possible. Limited starting resources, unlimited zombies.";
+// src/dialogs/tutorial-1.ts
+async function tutorial1() {
+  let dialog = new Dialog("Tutorial #1");
+  let node3 = document.createElement("div");
+  node3.innerHTML = HTML2;
+  dialog.append(node3);
+  dialog.addKey({ id: "", code: "Escape" });
+  await dialog.show();
+}
+var HTML2 = `
+<p>Welcome to the Rogue Zombies tutorial! You can move around using arrows, numpad or vi-keys (hjkl/yubn).</p>
+<p>There is a lone zombie nearby. You can kill it by <em>bumping</em> into it, i.e. by trying to move to the zombie's place. Do that right now!</p>
+<p>Press <kbd>esc</kbd> to continue.</p>
+`;
+
+// src/dialogs/tutorial-2.ts
+async function tutorial2() {
+  let dialog = new Dialog("Tutorial #2");
+  let node3 = document.createElement("div");
+  node3.innerHTML = HTML3;
+  dialog.append(node3);
+  dialog.addKey({ id: "", code: "Escape" });
+  await dialog.show();
+}
+var HTML3 = `
+<p>Good job! No more zombies in sight. Also, by killing the zombie, you earned your first money.</p>
+<p>Of course, fighting zombies by <em>bumping</em> into them would not work for long.
+The best way to combat these undead folks is by using <strong>items</strong>.
+When in the game, you can always open the item shop with the <kbd>S</kbd> key.</p>
+<p>It would be wise to try that out now. Press <kbd>esc</kbd> to continue and use the earned money to buy <strong>a rake</strong>.</p>
+`;
+
+// src/dialogs/tutorial-3.ts
+async function tutorial3() {
+  let dialog = new Dialog("Tutorial #3");
+  let node3 = document.createElement("div");
+  node3.innerHTML = HTML4;
+  dialog.append(node3);
+  dialog.addKey({ id: "", code: "Escape" });
+  await dialog.show();
+}
+var HTML4 = `
+<p>Your inventory is displayed below the map. Available items can be used by pressing the corresponding number key.</p>
+<p>As you can see, another zombie has spawned. This might be a good time to use those rakes you just bought.</p>
+<p>A rake is your basic trap item: you place it on the ground and wait for a zombie to step on it.
+When that happens, both the zombie and the rake gets destroyed.</p>
+<p>Press <kbd>esc</kbd> to continue and get rid of the zombie.</p>
+`;
+
+// src/dialogs/tutorial-4.ts
+async function tutorial4() {
+  let dialog = new Dialog("Tutorial #4");
+  let node3 = document.createElement("div");
+  node3.innerHTML = HTML5;
+  dialog.append(node3);
+  dialog.addKey({ id: "", code: "Escape" });
+  await dialog.show();
+}
+var HTML5 = `
+<p>The tutorial is almost over. You can move around and kill zombies with stuff - like a boss.</p>
+<p>In a typical game, you start in preparation phase in order to buy items and organize your defenses.
+The real heat is then started by pressing the <kbd>FIXME</kbd> key. This is where the action begins.</p>
+<p>In this tutorial, only four more zombies will spawn once you do that. Press <kbd>esc</kbd> and start the invasion when ready.</p>
+`;
+
+// src/levels/tutorial.ts
+var Tutorial = class extends Level {
+  static Name = "Tutorial";
+  static description = "Learn controls and concepts. Improve your de-zombification skills. Every game needs a tutorial.";
+  phase = "movement";
+  constructor(renderer) {
+    super(renderer);
+    const { map, player, zombies } = this;
+    player.position = [5, map.height - 5];
+    map.addBeing(player);
+    zombies.spawnAt(map.width - 10, 10);
+  }
+  isAllowed(feature) {
+    if (feature == "spawn") {
+      return false;
+    }
+    if (feature == "start") {
+      if (this.phase != "starting") {
+        return false;
+      }
+    }
+    return super.isAllowed(feature);
+  }
+  async play() {
+    await this.help();
+    return super.play();
+  }
+  start() {
+    const { map, zombies } = this;
+    map.getCorners().forEach((pos) => {
+      pos = getFreePosition(map, pos);
+      zombies.spawnAt(pos[0], pos[1]);
+    });
+    super.start();
+  }
+  help() {
+    play("ping");
+    switch (this.phase) {
+      case "movement":
+        return tutorial1();
+      case "buying":
+        return tutorial2();
+      case "using":
+        return tutorial3();
+      case "starting":
+        return tutorial4();
+    }
+  }
+  async shop() {
+    const { player, zombies, map } = this;
+    await shop(player, { only: "rake" });
+    if (player.getItem("rake") > 0 && this.phase == "buying") {
+      this.phase = "using";
+      await sleep3(1e3);
+      let pos = getDistantCorner(map, player);
+      zombies.spawnAt(pos[0], pos[1]);
+      await this.help();
+    }
+  }
+  async playRound() {
+    if (this.score == 1 && this.phase == "movement") {
+      this.phase = "buying";
+      await sleep3(1e3);
+      await this.help();
+    }
+    if (this.score == 2 && this.phase == "using") {
+      this.phase = "starting";
+      await sleep3(1e3);
+      await this.help();
+    }
+    return super.playRound();
+  }
+  get done() {
+    return this.player.hp <= 0 || this.score == 6;
+  }
 };
+function sleep3(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+function getDistantCorner(map, player) {
+  let corners = map.getCorners();
+  let ppos = player.position;
+  corners.sort((a, b) => ppos.distance(b) - ppos.distance(a));
+  return corners[0];
+}
+function getFreePosition(map, position) {
+  let [x, y] = position;
+  while (true) {
+    let being = map.getBeing(x, y);
+    if (!being) {
+      return [x, y];
+    }
+    x += 2 * (x < map.width / 2 ? 1 : -1);
+    y += 2 * (y < map.height / 2 ? 1 : -1);
+  }
+}
 
 // src/index.ts
 async function run() {
@@ -1569,8 +1753,7 @@ async function run() {
   let renderer = new RCtor2();
   document.querySelector("main").prepend(renderer.node);
   while (true) {
-    let Ctor = Regular;
-    await new Ctor(renderer).play();
+    await new Tutorial(renderer).play();
   }
 }
 run();

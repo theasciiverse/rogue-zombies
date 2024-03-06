@@ -70,8 +70,8 @@ export default class Zombie extends Being {
 			return {type} as MovementResult;
 		}
 
-		let currentDistance = distance(position, player.position);
-		let dist = distance([x, y], player.position);
+		let currentDistance = player.position.distance(position);
+		let dist = player.position.distance([x, y]);
 		if (dist > currentDistance) { return {type:"invalid"}; } // pohorsime si
 
 		let item = map.getItem(x, y);
@@ -103,8 +103,3 @@ function pickBestDistanceResult(results: (MoveResult | ItemResult)[]) {
 	return results.filter(r => r.dist == best).random();
 }
 
-function distance(pos1: number[], pos2: number[]) {
-	var dx = Math.abs(pos1[0]-pos2[0]);
-	var dy = Math.abs(pos1[1]-pos2[1]);
-	return Math.max(dx, dy);
-}

@@ -4,8 +4,6 @@ import Level from "../levels/level.js";
 import { ITEMS } from "../items/db.js";
 import * as keyboard from "../keyboard.js";
 import * as log from "../log.js";
-import help from "../dialogs/help.js";
-import buy from "../dialogs/buy.js";
 import start from "../dialogs/start.js";
 import * as sfx from "../sfx.js";
 
@@ -15,11 +13,12 @@ export const MAX_HP = 3;
 export default class Player extends Being {
 	readonly visual = {ch:"@", fg:"red"};
 	protected _hp = MAX_HP;
-	protected _money = 10;
+	protected _money: number;
 	readonly items = new window.Map<string, number>();
 
 	constructor(protected level: Level) {
 		super(level.map);
+		this._money = level.initialMoney;
 	}
 
 	get hp() { return this._hp; }
@@ -53,6 +52,8 @@ export default class Player extends Being {
 		const { level } = this;
 		log.clear();
 
+		if (isIdle(key)) { return true; }
+
 		if (key.code in MOVEMENT) {
 			let diff = MOVEMENT[key.code] as [number, number];
 			return this.moveBy(...diff);
@@ -63,12 +64,12 @@ export default class Player extends Being {
 			return (num ? this.tryItem(num[0]) : false);
 		}
 
-		if (key.key == "b" && level.buyingAllowed) {
-			await buy(this);
+		if (key.key == "s" && level.isAllowed("shop")) {
+			await level.shop();
 			return false;
 		}
 
-		if (key.key == "s" && level.canBeStarted) {
+		if (key.key == "s" && level.isAllowed("start")) { // FIXM
 			let result = await start();
 			if (result) {
 				level.start();
@@ -79,7 +80,7 @@ export default class Player extends Being {
 		}
 
 		if (key.key == "?") {
-			await help();
+			await level.help();
 			return false;
 		}
 
@@ -164,24 +165,36 @@ async function waitForDirection(prefix: string): Promise<[number, number] | null
 	}
 }
 
+function isIdle(key: KeyboardEvent) {
+	return (key.code == "Numpad5" || key.code == "Space" || key.key == ".");
+}
+
 const MOVEMENT = {
 	"Numpad7": [-1, -1],
-
-	"ArrowDown": [0, 1],
-	"Numpad2": [0, 1],
-
-	"Numpad9": [1, -1],
-
-	"ArrowLeft": [-1, 0],
-	"Numpad4": [-1, 0],
-
-	"ArrowRight": [1, 0],
-	"Numpad6": [1, 0],
+	"KeyY": [-1, -1],
 
 	"ArrowUp": [0, -1],
 	"Numpad8": [0, -1],
+	"KeyK": [0, -1],
+
+	"Numpad9": [1, -1],
+	"KeyU": [1, -1],
+
+	"ArrowLeft": [-1, 0],
+	"Numpad4": [-1, 0],
+	"KeyH": [-1, 0],
+
+	"ArrowRight": [1, 0],
+	"Numpad6": [1, 0],
+	"KeyL": [1, 0],
 
 	"Numpad1": [-1, 1],
+	"KeyB": [-1, 1],
 
-	"Numpad3": [1, 1]
+	"ArrowDown": [0, 1],
+	"Numpad2": [0, 1],
+	"KeyJ": [0, 1],
+
+	"Numpad3": [1, 1],
+	"KeyN": [1, 1]
 }

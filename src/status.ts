@@ -16,14 +16,14 @@ export function init() {
 	DOM_MISC["money"] = buildMoney();
 	DOM_MISC["start"] = buildStart();
 	DOM_MISC["score"] = buildScore();
-	DOM_MISC["buy"] = buildBuy();
+	DOM_MISC["shop"] = buildShop();
 	DOM_MISC["help"] = buildHelp();
 
 	let nodes = [
 		...Object.values(DOM_ITEMS),
 		"\n",
 		DOM_MISC["hp"], DOM_MISC["money"], DOM_MISC["start"],
-		DOM_MISC["score"], DOM_MISC["buy"], DOM_MISC["help"]
+		DOM_MISC["score"], DOM_MISC["shop"], DOM_MISC["help"]
 	];
 
 	node.replaceChildren(...nodes);
@@ -43,7 +43,7 @@ export function update(level: Level) {
 	updateMoney(level);
 	updateStart(level);
 	updateScore(level);
-	updateBuy(level);
+	updateShop(level);
 }
 
 function buildHP() {
@@ -74,7 +74,7 @@ function buildMoney() {
 
 function updateMoney(level: Level) {
 	let node = DOM_MISC["money"];
-	node.hidden = (!level.buyingAllowed);
+	node.hidden = !level.isAllowed("shop");
 
 	let span = node.querySelector(".money")!;
 	let money = level.player.money;
@@ -90,7 +90,7 @@ function buildScore() {
 
 function updateScore(level: Level) {
 	let node = DOM_MISC["score"];
-	node.hidden = level.canBeStarted;
+	node.hidden = !level.isAllowed("score");
 
 	let span = node.querySelector(".score")!;
 	let score = level.score;
@@ -105,17 +105,17 @@ function buildStart() {
 }
 
 function updateStart(level: Level) {
-	DOM_MISC["start"].hidden = !level.canBeStarted;
+	DOM_MISC["start"].hidden = !level.isAllowed("start");
 }
 
-function buildBuy() {
+function buildShop() {
 	let node = document.createElement("span");
-	node.append("  ", buildKey("B", "uy items"));
+	node.append("  ", buildKey("S", "hop"));
 	return node;
 }
 
-function updateBuy(level: Level) {
-	DOM_MISC["buy"].hidden = !level.buyingAllowed;
+function updateShop(level: Level) {
+	DOM_MISC["shop"].hidden = !level.isAllowed("shop");
 }
 
 function buildHelp() {

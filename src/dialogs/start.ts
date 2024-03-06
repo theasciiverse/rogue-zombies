@@ -16,6 +16,7 @@ export default async function start() {
 
 const HTML = `
 If you want to start the zombie invasion, press <kbd>space</kbd>.
-Zombies will slowly start spawning (you can still buy stuff).
-Otherwise, press <kbd>esc</kbd> to exit.
-`
+Zombies will slowly start spawning and wandering around. (Item shop is still available in non-snadbox game modes).
+<br/><br/>
+Press <kbd>esc</kbd> to return back to preparations.
+`;

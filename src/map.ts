@@ -28,6 +28,16 @@ export default class Map {
 		}
 	}
 
+	getCorners() {
+		const { width, height } = this;
+		return [
+			[0, 0],
+			[width-1, 0],
+			[0, height-1],
+			[width-1, height-1]
+		];
+	}
+
 	isPositionValid(x: number, y: number) {
 		const { width, height } = this;
 		if (x < 0 || x >= width || y < 0 || y >= height) { return false; }

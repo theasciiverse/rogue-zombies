@@ -3,14 +3,16 @@ import Zombies from "../zombies.js";
 
 import Map from "../map.js";
 import Renderer from "../renderer/renderer.js";
-import House from "../items/house.js";
 import * as log from "../log.js";
 import * as status from "../status.js";
 import * as metrics from "../metrics.js";
 import gameOver from "../dialogs/gameover.js";
+import help from "../dialogs/help.js";
+import shop from "../dialogs/shop.js";
 
 
 const ZOMBIE_MOVE_CHANCE = 0.5;
+export type Feature = "shop" | "start" | "score" | "spawn";
 
 export default class Level {
 	static Name = "???";
@@ -33,23 +35,33 @@ export default class Level {
 		let player = new Player(this);
 		this.player = player;
 
-		player.position = [15,15];
-		map.addBeing(player);
-
-		[
-			new House(map, 10, 10),
-			new House(map, 11, 10),
-			new House(map, 12, 10),
-			new House(map, 12, 11)
-		].forEach(h => map.addItem(h));
-
 		this.updateStatus();
 	}
 
 	get zombieMoveChance()  { return ZOMBIE_MOVE_CHANCE; }
-	get buyingAllowed() { return true; }
-	get canBeStarted() { return !this._started; }
-	get started() { return this._started; }
+
+	isAllowed(feature: Feature) {
+		switch (feature) {
+			case "shop": return true;
+			case "start": return !this._started;
+			case "score": return this._started;
+			case "spawn": return this._started;
+		}
+	}
+
+	get initialMoney() { return 0; }
+	get rounds() { return this._rounds; } // chce znat status
+	get score() { return this._score; } // chce znat gameOver a status
+	protected get done() { return (this.player.hp <= 0); }
+
+	shop() { return shop(this.player); }
+
+	help() { return help(); }
+
+	increaseScore() {
+		this._score++;
+		this.player.money++;
+	}
 
 	start() {
 		this._started = true;
@@ -58,27 +70,21 @@ export default class Level {
 
 	updateStatus() { status.update(this); }
 
-	get rounds() { return this._rounds; } // chce znat status
-	get score() { return this._score; } // chce znat gameOver a status
-	increaseScore() {
-		this._score++;
-		this.player.money++;
-	}
-
 	async play() {
-		const { player, zombies } = this;
-
 		while (!this.done) {
-			this._rounds++;
-			this.updateStatus();
-
-			await player.play();
-			await zombies.play();
-			await log.flush();
+			await this.playRound();
 		}
-
 		await gameOver(this);
 	}
 
-	protected get done() { return (this.player.hp <= 0); }
+	protected async playRound() {
+		const { player, zombies } = this;
+
+		this._rounds++;
+		this.updateStatus();
+
+		await player.play();
+		await zombies.play();
+		await log.flush();
+	}
 }

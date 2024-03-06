@@ -1,4 +1,5 @@
 import Level from "./level.js";
+import Renderer from "../renderer/renderer.js";
 
 
 const TURNS = 100;

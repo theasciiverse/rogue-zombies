@@ -9,7 +9,7 @@ import Combo from "./renderer/combo.js";
 import Canvas from "./renderer/canvas.js";
 import DOM from "./renderer/dom.js";
 
-import Regular from "./levels/regular.js"
+import Ctor from "./levels/tutorial.js"
 
 
 async function run() {
@@ -26,7 +26,6 @@ async function run() {
 
 	while (true) {
 //		let Ctor = await pickLevel()
-		let Ctor = Regular;
 		await new Ctor(renderer).play();
 	}
 }

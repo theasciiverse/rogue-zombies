@@ -1,4 +1,4 @@
-import Level from "./level.js";
+import Level, { Feature } from "./level.js";
 import Renderer from "../renderer/renderer.js";
 
 
@@ -9,7 +9,12 @@ export default class Sandbox extends Level {
 	constructor(renderer: Renderer) {
 		super(renderer);
 
-		const { player } = this;
+		const { map, player } = this;
+
+		let x = Math.floor(map.width / 2);
+		let y = Math.floor(map.height / 2);
+		player.position = [x, y];
+		map.addBeing(player);
 
 		player.setItem("rake", Infinity);
 		player.setItem("barricade", Infinity);
@@ -20,5 +25,9 @@ export default class Sandbox extends Level {
 		player.setItem("fence", Infinity);
 	}
 
-	get buyingAllowed() { return false; }
+	isAllowed(feature: Feature) {
+		if (feature == "shop") { return false; }
+		return super.isAllowed(feature);
+	}
 }
+

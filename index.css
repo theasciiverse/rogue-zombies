@@ -136,7 +136,7 @@ td:has(.money) { white-space: nowrap; }
 
 #status { white-space: pre; }
 #status span:not([hidden]) { display: inline-block; } /* aby se dal animovat */
-#status .count::before {
+#status .count::before, dialog .count::after {
 	content: "×";
 	opacity: 0.5;
 }

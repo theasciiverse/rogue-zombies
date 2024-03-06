@@ -21,7 +21,7 @@ export default class Zombies {
 			await activeZombies[i].play(level.player);
 		}
 
-		if (level.started) { // spawn logic
+		if (level.isAllowed("spawn")) { // spawn logic
 			this.rounds++;
 			let spawnPotential = this.updateSpawnPotential();
 			if (spawnPotential >= 1) {
@@ -37,19 +37,25 @@ export default class Zombies {
 		this.zombies = this.zombies.filter(z => z != zombie);
 	}
 
-	protected spawn(amount: number) {
-		const { zombies, level } = this;
+	spawnAt(x: number, y: number) {
+		const { level, zombies } = this;
 		const { map } = level;
+
+		let zombie = new Zombie(map, this);
+		zombie.position = [x, y]
+		zombies.push(zombie);
+		map.addBeing(zombie);
+	}
+
+	protected spawn(amount: number) {
+		const { map } = this.level;
 
 		sfx.play("zombie-spawn");
 
-		let corners = getCorners(map);
+		let corners = map.getCorners();
 		for (let i=0;i<amount;i++) {
 			let corner = corners.random();
-			let zombie = new Zombie(map, this);
-			zombie.position = corner.slice();
-			zombies.push(zombie);
-			map.addBeing(zombie);
+			this.spawnAt(corner[0], corner[1]);
 		}
 	}
 
@@ -57,14 +63,4 @@ export default class Zombies {
 		this.spawnPotential += Math.pow(this.rounds, 0.8) / 30; // fixme rules
 		return this.spawnPotential;
 	}
-}
-
-function getCorners(map: Map) {
-	const { width, height } = map;
-	return [
-		[0, 0],
-		[width-1, 0],
-		[width-1, height-1],
-		[0, height-1]
-	];
 }
