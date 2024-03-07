@@ -1418,10 +1418,24 @@ var DEAD = `${ALIVE} The zombies have eaten your brains.`;
 // src/dialogs/help.ts
 async function help() {
   let dialog = new Dialog("Help!");
+  let div = document.createElement("div");
+  div.innerHTML = HTML2;
+  dialog.append(div);
   dialog.addKey({ id: "", key: "Escape" });
-  dialog.addKey({ id: "one", key: "1" });
-  let result = await dialog.show();
+  await dialog.show();
 }
+var HTML2 = `
+<ul>
+<li>Move around using arrow keys, numpad or vi-keys. Skip a turn by pressing spacebar, dot or numpad-5.
+Items can be used by pressing the corresponding number key.</li>
+
+<li>Kill zombies to earn money. Use money to buy items (press <kbd>I</kbd> to open the item shop).</li>
+
+<li>Zombies are not spawning until you start the game with the <kbd>S</kbd> key. Once you start the invasion, there is no going back!</li>
+</ul>
+
+<p>Press <kbd>escape</kbd> to continue</p>
+`;
 
 // src/dialogs/shop.ts
 async function shop(player, options) {
@@ -1582,174 +1596,37 @@ var Level = class {
   }
 };
 
-// src/dialogs/tutorial-1.ts
-async function tutorial1() {
-  let dialog = new Dialog("Tutorial #1");
-  let node3 = document.createElement("div");
-  node3.innerHTML = HTML2;
-  dialog.append(node3);
-  dialog.addKey({ id: "", code: "Escape" });
-  await dialog.show();
-}
-var HTML2 = `
-<p>Welcome to the Rogue Zombies tutorial! You can move around using arrows (\u2190\u2193\u2191\u2192), numpad or vi-keys (hjkl/yubn). It is possible and recommended to move diagonally as well.</p>
-<p>There is a lone zombie nearby. You can kill it by <em>bumping</em> into it, i.e. by trying to move to the zombie's place. Do that right now!</p>
-<p>Press <kbd>esc</kbd> to continue.</p>
-`;
+// src/items/house.ts
+var House = class extends Item {
+  visual = { ch: "#", fg: "saddlebrown", bg: "black" };
+  blocks = true;
+  _hp = 3;
+  constructor(map, x, y) {
+    super(map);
+    this._position = [x, y];
+  }
+};
 
-// src/dialogs/tutorial-2.ts
-async function tutorial2() {
-  let dialog = new Dialog("Tutorial #2");
-  let node3 = document.createElement("div");
-  node3.innerHTML = HTML3;
-  dialog.append(node3);
-  dialog.addKey({ id: "", code: "Escape" });
-  await dialog.show();
-}
-var HTML3 = `
-<p>Good job! No more zombies in sight. Also, by killing the zombie, you earned your first money.</p>
-<p>Of course, fighting zombies by <em>bumping</em> into them would not work for long.
-The best way to combat these undead folks is by using <strong>items</strong>.
-When in the game, you can always open the item shop with the <kbd>I</kbd> key.</p>
-<p>It would be wise to try that out now. Press <kbd>esc</kbd> to continue and use the earned money to buy <strong>a rake</strong>.</p>
-`;
-
-// src/dialogs/tutorial-3.ts
-async function tutorial3() {
-  let dialog = new Dialog("Tutorial #3");
-  let node3 = document.createElement("div");
-  node3.innerHTML = HTML4;
-  dialog.append(node3);
-  dialog.addKey({ id: "", code: "Escape" });
-  await dialog.show();
-}
-var HTML4 = `
-<p>Your inventory is displayed below the map. Available items can be used by pressing the corresponding number key.</p>
-<p>As you can see, another zombie has spawned. This might be a good time to use those rakes you just bought.</p>
-<p>A rake is your basic trap item: you place it on the ground and wait for a zombie to step on it.
-When that happens, both the zombie and the rake gets destroyed.</p>
-<p>Press <kbd>esc</kbd> to continue and get rid of the zombie.</p>
-`;
-
-// src/dialogs/tutorial-4.ts
-async function tutorial4() {
-  let dialog = new Dialog("Tutorial #4");
-  let node3 = document.createElement("div");
-  node3.innerHTML = HTML5;
-  dialog.append(node3);
-  dialog.addKey({ id: "", code: "Escape" });
-  await dialog.show();
-}
-var HTML5 = `
-<p>The tutorial is almost over. You can move around and kill zombies with stuff - like a boss.
-The Sandbox game mode is a good way to familiarize yourself with other items that can be bought.</p>
-<p>In a typical game, you start in preparation phase in order to buy items and organize your defenses.
-The real heat is then started by pressing the <kbd>S</kbd> key. This is where the action begins.</p>
-<p>In this tutorial, only four more zombies will spawn once you do that. Press <kbd>esc</kbd> and start the invasion when ready.</p>
-`;
-
-// src/levels/tutorial.ts
-var Tutorial = class extends Level {
-  static Name = "Tutorial";
-  static description = "Learn controls and concepts. Improve your de-zombification skills. Every game needs a tutorial.";
-  phase = "movement";
+// src/levels/regular.ts
+var Regular = class extends Level {
+  static Name = "Regular";
+  static description = "Survive for as long as possible. Limited starting resources, unlimited zombies.";
   constructor(renderer) {
     super(renderer);
     const { map, player } = this;
-    player.position = [5, map.height - 5];
+    player.position = [15, 15];
     map.addBeing(player);
+    [
+      new House(map, 10, 10),
+      new House(map, 11, 10),
+      new House(map, 12, 10),
+      new House(map, 12, 11)
+    ].forEach((h) => map.addItem(h));
   }
-  isAllowed(feature) {
-    if (feature == "spawn") {
-      return false;
-    }
-    if (feature == "start") {
-      if (this.phase != "starting") {
-        return false;
-      }
-    }
-    return super.isAllowed(feature);
-  }
-  get done() {
-    return this.player.hp <= 0 || this.score == 6;
-  }
-  async play() {
-    await this.changePhase("movement");
-    return super.play();
-  }
-  start() {
-    const { map, zombies } = this;
-    map.getCorners().forEach((pos) => {
-      pos = getFreePosition(map, pos);
-      zombies.spawnAt(pos[0], pos[1]);
-    });
-    super.start();
-  }
-  help() {
-    switch (this.phase) {
-      case "movement":
-        return tutorial1();
-      case "buying":
-        return tutorial2();
-      case "using":
-        return tutorial3();
-      case "starting":
-        return tutorial4();
-    }
-  }
-  async shop() {
-    const { player } = this;
-    await shop(player, { only: "rake" });
-    if (player.getItem("rake") > 0 && this.phase == "buying") {
-      await this.changePhase("using");
-    }
-  }
-  async playRound() {
-    if (this.score == 1 && this.phase == "movement") {
-      await this.changePhase("buying");
-    }
-    if (this.score == 2 && this.phase == "using") {
-      await this.changePhase("starting");
-    }
-    return super.playRound();
-  }
-  async changePhase(phase) {
-    const { player, zombies, map } = this;
-    this.phase = phase;
-    await sleep3(1e3);
-    switch (phase) {
-      case "movement":
-        zombies.spawnAt(map.width - 10, 10);
-        break;
-      case "using":
-        let pos = getDistantCorner(map, player);
-        zombies.spawnAt(pos[0], pos[1]);
-        break;
-    }
-    play("ping");
-    await this.help();
+  get initialMoney() {
+    return 10;
   }
 };
-function sleep3(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-function getDistantCorner(map, player) {
-  let corners = map.getCorners();
-  let ppos = player.position;
-  corners.sort((a, b) => ppos.distance(b) - ppos.distance(a));
-  return corners[0];
-}
-function getFreePosition(map, position) {
-  let [x, y] = position;
-  while (true) {
-    let being = map.getBeing(x, y);
-    if (!being) {
-      return [x, y];
-    }
-    x += 2 * (x < map.width / 2 ? 1 : -1);
-    y += 2 * (y < map.height / 2 ? 1 : -1);
-  }
-}
 
 // src/index.ts
 async function run() {
@@ -1760,7 +1637,7 @@ async function run() {
   let renderer = new RCtor2();
   document.querySelector("main").prepend(renderer.node);
   while (true) {
-    await new Tutorial(renderer).play();
+    await new Regular(renderer).play();
   }
 }
 run();

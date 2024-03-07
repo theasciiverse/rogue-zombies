@@ -113,7 +113,7 @@ dialog h2::before, dialog h2::after { color: goldenrod; }
 dialog h2::before { content: "--== "; }
 dialog h2::after { content: " ==--"; }
 
-dialog h2, dialog p, dialog table, dialog dl, dialog dd { margin-top: 0; margin-bottom: 1.3em; }
+dialog h2, dialog p, dialog table, dialog dl, dialog dd, dialog ul, dialog li { margin-top: 0; margin-bottom: 1.3em; }
 
 table { border-collapse: collapse; }
 td { padding: 0; }

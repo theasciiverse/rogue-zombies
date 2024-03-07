@@ -9,7 +9,7 @@ import Combo from "./renderer/combo.js";
 import Canvas from "./renderer/canvas.js";
 import DOM from "./renderer/dom.js";
 
-import Ctor from "./levels/tutorial.js"
+import Ctor from "./levels/regular.js"
 
 
 async function run() {
