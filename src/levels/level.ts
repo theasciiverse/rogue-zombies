@@ -1,14 +1,17 @@
 import Player from "../beings/player.js";
 import Zombies from "../zombies.js";
-
 import Map from "../map.js";
 import Renderer from "../renderer/renderer.js";
 import * as log from "../log.js";
 import * as status from "../status.js";
 import * as metrics from "../metrics.js";
+import * as river from "../terrain/river.js";
+import * as forest from "../terrain/forest.js";
+import * as house from "../terrain/house.js";
 import gameOver from "../dialogs/gameover.js";
 import help from "../dialogs/help.js";
 import shop from "../dialogs/shop.js";
+import { randomInt } from "../random.js";
 
 
 const ZOMBIE_MOVE_CHANCE = 0.5;
@@ -35,6 +38,7 @@ export default class Level {
 		let player = new Player(this);
 		this.player = player;
 
+		this.setupTerrain();
 		this.updateStatus();
 	}
 
@@ -86,5 +90,19 @@ export default class Level {
 		await player.play();
 		await zombies.play();
 		await log.flush();
+	}
+
+	protected setupTerrain() {
+		const { map, player } = this;
+
+		let riverIndex = randomInt(0, 3);
+		river.create(map, riverIndex);
+
+		let forestIndex = (riverIndex + 2) % 4;
+		forest.create(map, forestIndex);
+
+		let center = house.create(map);
+		player.position = center;
+		map.addBeing(player);
 	}
 }

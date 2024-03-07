@@ -2,18 +2,19 @@ import Entity from "../entity.js";
 import Item from "./item.js";
 import * as log from "../log.js";
 import * as sfx from "../sfx.js";
+import * as colors from "../colors.js"
 
 
-// FIXME pekne hnusny
-const COLORS = ["", "#300", "#850", "#c90"];
+const COLORS = ["", ...colors.WOOD.slice().reverse()];
 
 export default class Barricade extends Item {
 	static Name = "Wooden barricade";
 	static description = "Can hold them for some time.";
 
-	readonly blocks = true;
 	protected _hp = COLORS.length-1;
 	readonly visual = { ch: "#", fg: COLORS[COLORS.length-1] };
+
+	get blocksMovement() { return true; }
 
 	damage(source: Entity) {
 		sfx.play("barricade");

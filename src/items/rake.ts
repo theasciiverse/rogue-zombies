@@ -2,12 +2,13 @@ import Item from "./item.js";
 import Being from "../beings/being.js";
 import * as log from "../log.js";
 import * as sfx from "../sfx.js";
+import * as colors from "../colors.js";
 
 
 export default class Rake extends Item {
 	static Name = "Rake";
 	static description = "Kills one zombie dumb enough to step on it.";
-	readonly visual = {ch:"T", fg:"#999"};
+	readonly visual = {ch:"T", fg:colors.WOOD[1]};
 
 	use(position: number[], direction: number[]) {
 		let ok = super.use(position, direction);

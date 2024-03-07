@@ -33,8 +33,8 @@ export default class Map {
 		return [
 			[0, 0],
 			[width-1, 0],
-			[0, height-1],
-			[width-1, height-1]
+			[width-1, height-1],
+			[0, height-1]
 		];
 	}
 
@@ -60,12 +60,6 @@ export default class Map {
 
 	getItem(x: number, y: number) {
 		return this.items.find(item => item.position[0] == x && item.position[1] == y);
-	}
-
-	getBlocker(x: number, y: number) {
-		let item = this.getItem(x, y);
-		if (item && item.blocks) { return item; }
-		return this.getBeing(x, y);
 	}
 
 	removeBeing(being: Being) {

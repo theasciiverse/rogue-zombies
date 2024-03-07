@@ -5,6 +5,7 @@ import Being from "../beings/being.js";
 import Map from "../map.js";
 import * as log from "../log.js";
 import * as sfx from "../sfx.js";
+import * as colors from "../colors.js";
 import DIRS from "../dirs.js";
 
 
@@ -13,7 +14,7 @@ const CONNECTION_DISTANCE = 3;
 export default class Wire extends Item {
 	static Name = "Barbed wire";
 	static description = "Auto-connects to nearby wires. Has little health.";
-	readonly visual = {ch:"#", fg:"#888"};
+	readonly visual = {ch:"#", fg:colors.METAL};
 	protected sound: Parameters<typeof sfx.play>[0] = "wire";
 
 	activate(being: Being) {
@@ -48,10 +49,11 @@ function tryConnection(position: number[], direction: number[], map: Map, Ctor: 
 	for (let i=1;i<CONNECTION_DISTANCE;i++) {
 		let x = position[0] + i*direction[0];
 		let y = position[1] + i*direction[1];
-		let blocker = map.getBlocker(x, y);
-		if (blocker && !(blocker instanceof Player)) { break; } // sorry
 
+		let being = map.getBeing(x, y);
 		let item = map.getItem(x, y);
+
+		if (being && !(being instanceof Player)) { break; } // sorry
 		if (item) {
 			if (item instanceof Corpse) { continue; } // we remove them in the process
 			if (item instanceof Ctor) { amount = i-1; }

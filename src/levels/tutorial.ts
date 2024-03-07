@@ -1,6 +1,6 @@
 import Level, { Feature } from "./level.js";
-import Renderer from "../renderer/renderer.js";
 import Being from "../beings/being.js";
+import Tree from "../items/tree.js";
 import Map from "../map.js";
 import shop from "../dialogs/shop.js";
 import * as sfx from "../sfx.js";
@@ -18,10 +18,17 @@ export default class Tutorial extends Level {
 	static description = "Learn controls and concepts. Improve your de-zombification skills. Every game needs a tutorial.";
 	protected phase: Phase = "movement";
 
-	constructor(renderer: Renderer) {
-		super(renderer);
-
+	protected setupTerrain() {
 		const { map, player } = this;
+
+		for (let i=0; i<map.width; i++) {
+			for (let j=0; j<map.height; j++) {
+				if (i == 0 || j == 0 || i == map.width-1 || j == map.height-1) {
+					let tree = new Tree(map, i, j);
+					map.addItem(tree);
+				}
+			}
+		}
 
 		player.position = [5, map.height-5];
 		map.addBeing(player);
@@ -112,14 +119,15 @@ function getDistantCorner(map: Map, player: Being) {
 	let corners = map.getCorners();
 	let ppos = player.position;
 	corners.sort((a, b) => ppos.distance(b) - ppos.distance(a));
-	return corners[0];
+	return getFreePosition(map, corners[0]);
 }
 
 function getFreePosition(map: Map, position: number[]) {
 	let [x, y] = position;
 	while (true) {
 		let being = map.getBeing(x, y);
-		if (!being) { return [x, y]; }
+		let item = map.getItem(x, y);
+		if (!being && !item) { return [x, y]; }
 
 		x += 2 * (x < map.width/2 ? 1 : -1);
 		y += 2 * (y < map.height/2 ? 1 : -1);

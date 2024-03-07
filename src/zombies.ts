@@ -14,9 +14,14 @@ export default class Zombies {
 
 	async play() {
 		const { zombies, level } = this;
+		const ppos = level.player.position;
 
 		let activeZombies = zombies.filter(_ => Math.random() > level.zombieMoveChance);
-		// FIXME: sort podle vzdalenosti od hrace
+
+		// podle vzdalenosti od hrace, nejblizsi se hybou jako prvni
+		activeZombies.sort((a, b) => a.position.distance(ppos) - b.position.distance(ppos));
+		console.log(activeZombies);
+
 		for (let i=0; i<activeZombies.length;i++) {
 			await activeZombies[i].play(level.player);
 		}

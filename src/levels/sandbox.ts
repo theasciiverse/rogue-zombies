@@ -1,6 +1,5 @@
 import Level, { Feature } from "./level.js";
 import Renderer from "../renderer/renderer.js";
-import * as river from "../terrain/river.js";
 
 
 export default class Sandbox extends Level {
@@ -10,15 +9,7 @@ export default class Sandbox extends Level {
 	constructor(renderer: Renderer) {
 		super(renderer);
 
-		const { map, player } = this;
-
-		river.create(map);
-
-		let x = Math.floor(map.width / 2);
-		let y = Math.floor(map.height / 2);
-		player.position = [x, y];
-		map.addBeing(player);
-
+		const { player } = this;
 		player.setItem("rake", Infinity);
 		player.setItem("barricade", Infinity);
 		player.setItem("trap", Infinity);
@@ -33,4 +24,3 @@ export default class Sandbox extends Level {
 		return super.isAllowed(feature);
 	}
 }
-

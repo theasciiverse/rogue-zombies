@@ -3,12 +3,13 @@ import Being from "../beings/being.js";
 import * as log from "../log.js";
 import { explode } from "../explosion.js";
 import * as sfx from "../sfx.js";
+import * as colors from "../colors.js";
 
 
 export default class Mine extends Item {
 	static Name = "Mine";
 	static description = "Explodes when stepped on by a zombie.";
-	readonly visual = {ch:"*", fg:"gray"};
+	readonly visual = {ch:"+", fg:colors.METAL};
 
 	use(position: number[], direction: number[]) {
 		let ok = super.use(position, direction);

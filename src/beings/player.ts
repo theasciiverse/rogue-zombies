@@ -84,6 +84,12 @@ export default class Player extends Being {
 			return false;
 		}
 
+		if (key.key == "q") {
+			this._hp = 1;
+			this.damage(this);
+			return true;
+		}
+
 		return false;
 	}
 
@@ -104,11 +110,11 @@ export default class Player extends Being {
 
 		let item = map.getItem(x, y);
 		if (item) {
-			if (item.blocks) {
+			if (item.blocksMovement) {
 				log.add(`${item.name.article().capitalize()} blocks the way.`);
 				return false;
 			} else {
-				log.add(`You carefully sidestep ${item.name.article()}.`);
+				log.add(`${item.name.article().capitalize()} is here.`);
 			}
 		}
 

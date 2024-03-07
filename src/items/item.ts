@@ -8,8 +8,9 @@ export default abstract class Item extends Entity {
 	static Name = "";
 	static description = "";
 
-	readonly blocks: boolean = false;
-	readonly destructible: boolean = true;
+	get blocksMovement() { return false; }
+	get isDestructible() { return true; }
+	get blocksBazooka() { return this.blocksMovement; }
 
 	get name() { return (this.constructor as typeof Item).Name; }
 	die(source: Entity) { this.map.removeItem(this); }
@@ -20,16 +21,19 @@ export default abstract class Item extends Entity {
 
 		let tx = position[0] + direction[0];
 		let ty = position[1] + direction[1];
-		let blocker = map.getBlocker(tx, ty);
+		let being = map.getBeing(tx, ty);
+		let item = map.getItem(tx, ty);
 
-		if (blocker) {
-			log.add(`Cannot use ${this.name}: ${blocker.name.article()} is standing there!`);
+		if (being) {
+			log.add(`Cannot use ${this.name}: ${being.name.article()} is standing there!`);
 			return false;
 		}
 
-		let item = map.getItem(tx, ty);
 		if (item) {
-			if (item instanceof Corpse) {
+			if (item.blocksMovement) {
+				log.add(`Cannot use ${this.name}: ${being.name.article()} is standing there!`);
+				return false;
+			} else if (item instanceof Corpse) {
 				map.removeItem(item);
 				return true;
 			} else {

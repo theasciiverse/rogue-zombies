@@ -4,10 +4,10 @@ import Item from "../items/item.js";
 import Zombies from "../zombies.js";
 import Map from "../map.js";
 import DIRS from "../dirs.js"
+import * as colors from "../colors.js";
 
 
 const CHARS = ["z", "Z"];
-const COLORS = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
 
 type InvalidResult = { type: "invalid" };
 type PlayerResult = { type: "player" };
@@ -17,12 +17,12 @@ type MovementResult = InvalidResult | PlayerResult | MoveResult | ItemResult;
 
 
 export default class Zombie extends Being {
-	readonly visual = {ch:CHARS.random(), fg:COLORS.random()};
+	readonly visual = {ch:CHARS.random(), fg:colors.ZOMBIE.random()};
 	protected _name: string;
 
 	constructor(map: Map, protected zombies: Zombies) {
 		super(map);
-		if (Math.random() < 0.01) {
+		if (Math.random() < 0.001) {
 			this._name = "zombie lutefisk";
 		} else {
 			this._name = (this.visual.ch == "z"? "zombie" : "large zombie");
@@ -76,8 +76,8 @@ export default class Zombie extends Being {
 		let item = map.getItem(x, y);
 
 		if (item) {
-			if (item.blocks) {
-				if (item.destructible) {
+			if (item.blocksMovement) {
+				if (item.isDestructible) {
 					return {type:"item", dist, item};
 				} else {
 					return {type:"invalid"};

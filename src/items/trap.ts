@@ -2,12 +2,13 @@ import Item from "./item.js";
 import Being from "../beings/being.js";
 import * as log from "../log.js";
 import * as sfx from "../sfx.js";
+import * as colors from "../colors.js";
 
 
 export default class Trap extends Item {
 	static Name = "Bear trap";
 	static description = "Kills several zombies dumb enough to step on it.";
-	readonly visual = {ch:"0", fg:"#999"};
+	readonly visual = {ch:"0", fg:colors.METAL};
 	protected _hp = 3;
 
 	use(position: number[], direction: number[]) {

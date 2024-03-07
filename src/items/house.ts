@@ -1,14 +1,13 @@
-import Item from "./item.js";
+import Barricade from "./barricade.js";
 import Map from "../map.js";
 
 
-export default class House extends Item {
-	readonly visual = { ch: "#", fg: "saddlebrown", bg: "black" };
-	readonly blocks = true;
-	protected _hp = 3;
+export default class House extends Barricade {
+	static Name = "house wall";
 
-	constructor(map: Map, x:number, y:number) {
+	constructor(map: Map, ch: string, x:number, y:number) {
 		super(map);
+		this.visual.ch = ch;
 		this._position = [x, y];
 	}
 }

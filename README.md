@@ -26,7 +26,8 @@ AKA the development diary
 - Day #1 (Sunday 3. 3.): coffee, core structure, procrastinating with the engine, moving "@", basic ui, undecided on rendering
 - Day #2 (Monday 4. 3.): ice tea, item usage, renderer autosizing, explosions, some items are working
 - Day #3 (Tuesday 5. 3.): rooibos, finalizing items, procrastinating with sfx, more ui, main gameplay loop
-- Day #3 (Wednesday 6. 3.): earl grey, kopr, more dialogs and levels, tutorial
+- Day #4 (Wednesday 6. 3.): earl grey, kopr, more dialogs and levels, tutorial
+- Day #5 (Thursday 7. 3.): gunpowder, terrain, docs
 
 
 ## Legacy

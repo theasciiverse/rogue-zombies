@@ -213,8 +213,15 @@ async function waitForMore() {
 var Item = class extends Entity {
   static Name = "";
   static description = "";
-  blocks = false;
-  destructible = true;
+  get blocksMovement() {
+    return false;
+  }
+  get isDestructible() {
+    return true;
+  }
+  get blocksBazooka() {
+    return this.blocksMovement;
+  }
   get name() {
     return this.constructor.Name;
   }
@@ -228,14 +235,17 @@ var Item = class extends Entity {
     const { map } = this;
     let tx = position[0] + direction[0];
     let ty = position[1] + direction[1];
-    let blocker = map.getBlocker(tx, ty);
-    if (blocker) {
-      add(`Cannot use ${this.name}: ${blocker.name.article()} is standing there!`);
+    let being = map.getBeing(tx, ty);
+    let item = map.getItem(tx, ty);
+    if (being) {
+      add(`Cannot use ${this.name}: ${being.name.article()} is standing there!`);
       return false;
     }
-    let item = map.getItem(tx, ty);
     if (item) {
-      if (item instanceof Corpse) {
+      if (item.blocksMovement) {
+        add(`Cannot use ${this.name}: ${being.name.article()} is standing there!`);
+        return false;
+      } else if (item instanceof Corpse) {
         map.removeItem(item);
         return true;
       } else {
@@ -275,11 +285,21 @@ var Being = class extends Entity {
   }
 };
 
+// src/colors.ts
+var WOOD = ["#c90", "#850", "#300"];
+var WATER = "darkblue";
+var WAVE = ["#05f", "#28f", "#6cf"];
+var TREE = [WOOD[0], WOOD[1], "#181"];
+var FENCE = ["#88f", "#33a", "#008"];
+var METAL = "gray";
+var WINDOW = "dodgerblue";
+var ZOMBIE = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
+
 // src/items/trap.ts
 var Trap = class extends Item {
   static Name = "Bear trap";
   static description = "Kills several zombies dumb enough to step on it.";
-  visual = { ch: "0", fg: "#999" };
+  visual = { ch: "0", fg: METAL };
   _hp = 3;
   use(position, direction) {
     let ok = super.use(position, direction);
@@ -301,13 +321,15 @@ var Trap = class extends Item {
 };
 
 // src/items/barricade.ts
-var COLORS = ["", "#300", "#850", "#c90"];
+var COLORS = ["", ...WOOD.slice().reverse()];
 var Barricade = class extends Item {
   static Name = "Wooden barricade";
   static description = "Can hold them for some time.";
-  blocks = true;
   _hp = COLORS.length - 1;
   visual = { ch: "#", fg: COLORS[COLORS.length - 1] };
+  get blocksMovement() {
+    return true;
+  }
   damage(source) {
     play("barricade");
     super.damage(source);
@@ -334,7 +356,7 @@ var Barricade = class extends Item {
 var Rake = class extends Item {
   static Name = "Rake";
   static description = "Kills one zombie dumb enough to step on it.";
-  visual = { ch: "T", fg: "#999" };
+  visual = { ch: "T", fg: WOOD[1] };
   use(position, direction) {
     let ok = super.use(position, direction);
     if (!ok) {
@@ -368,18 +390,17 @@ var dirs_default = [
 
 // src/beings/zombie.ts
 var CHARS = ["z", "Z"];
-var COLORS2 = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
 var Zombie = class extends Being {
   constructor(map, zombies) {
     super(map);
     this.zombies = zombies;
-    if (Math.random() < 0.01) {
+    if (Math.random() < 1e-3) {
       this._name = "zombie lutefisk";
     } else {
       this._name = this.visual.ch == "z" ? "zombie" : "large zombie";
     }
   }
-  visual = { ch: CHARS.random(), fg: COLORS2.random() };
+  visual = { ch: CHARS.random(), fg: ZOMBIE.random() };
   _name;
   get name() {
     return this._name;
@@ -431,8 +452,8 @@ var Zombie = class extends Being {
     }
     let item = map.getItem(x, y);
     if (item) {
-      if (item.blocks) {
-        if (item.destructible) {
+      if (item.blocksMovement) {
+        if (item.isDestructible) {
           return { type: "item", dist, item };
         } else {
           return { type: "invalid" };
@@ -524,7 +545,7 @@ async function explode(map, position, radius, source) {
 var Mine = class extends Item {
   static Name = "Mine";
   static description = "Explodes when stepped on by a zombie.";
-  visual = { ch: "*", fg: "gray" };
+  visual = { ch: "+", fg: METAL };
   use(position, direction) {
     let ok = super.use(position, direction);
     if (!ok) {
@@ -563,7 +584,14 @@ var Bazooka = class extends Item {
         add("it flies away.");
         break;
       }
-      let target = map.getBlocker(tx, ty);
+      let being = map.getBeing(tx, ty);
+      let item = map.getItem(tx, ty);
+      let target;
+      if (being) {
+        target = being;
+      } else if (item && item.blocksBazooka) {
+        target = item;
+      }
       if (target) {
         add(`${target.name.article()} is hit!`);
         play("bazooka");
@@ -587,7 +615,7 @@ var CONNECTION_DISTANCE = 3;
 var Wire = class extends Item {
   static Name = "Barbed wire";
   static description = "Auto-connects to nearby wires. Has little health.";
-  visual = { ch: "#", fg: "#888" };
+  visual = { ch: "#", fg: METAL };
   sound = "wire";
   activate(being) {
     play(this.sound);
@@ -616,11 +644,11 @@ function tryConnection(position, direction, map, Ctor) {
   for (let i = 1; i < CONNECTION_DISTANCE; i++) {
     let x = position[0] + i * direction[0];
     let y = position[1] + i * direction[1];
-    let blocker = map.getBlocker(x, y);
-    if (blocker && !(blocker instanceof Player)) {
+    let being = map.getBeing(x, y);
+    let item = map.getItem(x, y);
+    if (being && !(being instanceof Player)) {
       break;
     }
-    let item = map.getItem(x, y);
     if (item) {
       if (item instanceof Corpse) {
         continue;
@@ -643,17 +671,17 @@ function tryConnection(position, direction, map, Ctor) {
 }
 
 // src/items/fence.ts
-var COLORS3 = ["", "#008", "#33a", "#88f"];
+var COLORS2 = ["", ...FENCE.slice().reverse()];
 var Fence = class extends Wire {
   static Name = "Electric fence";
   static description = "Auto-connects to nearby fences. Has more health.";
-  _hp = COLORS3.length - 1;
-  visual = { ch: "\u2248", fg: COLORS3[this._hp] };
+  _hp = COLORS2.length - 1;
+  visual = { ch: "!", fg: COLORS2[this._hp] };
   sound = "fence";
   damage(source) {
     super.damage(source);
     if (this._hp > 0) {
-      this.visual.fg = COLORS3[this._hp];
+      this.visual.fg = COLORS2[this._hp];
       this.map.changed(this);
     }
   }
@@ -843,6 +871,11 @@ var Player = class extends Being {
       await level.help();
       return false;
     }
+    if (key.key == "q") {
+      this._hp = 1;
+      this.damage(this);
+      return true;
+    }
     return false;
   }
   moveBy(dx, dy) {
@@ -861,11 +894,11 @@ var Player = class extends Being {
     }
     let item = map.getItem(x, y);
     if (item) {
-      if (item.blocks) {
+      if (item.blocksMovement) {
         add(`${item.name.article().capitalize()} blocks the way.`);
         return false;
       } else {
-        add(`You carefully sidestep ${item.name.article()}.`);
+        add(`${item.name.article().capitalize()} is here.`);
       }
     }
     this.position = [x, y];
@@ -1170,7 +1203,7 @@ var DOM = class extends Renderer {
         dnode.style.backgroundColor = visual.bg;
       }
       if (visual.fg) {
-        dnode.style.color = i + 1 == drawables.length ? visual.fg : "transparent";
+        dnode.style.color = visual.fg;
       }
       if (visual.ch) {
         dnode.textContent = visual.ch;
@@ -1222,7 +1255,10 @@ var Zombies = class {
   spawnPotential = 1;
   async play() {
     const { zombies, level } = this;
+    const ppos = level.player.position;
     let activeZombies = zombies.filter((_) => Math.random() > level.zombieMoveChance);
+    activeZombies.sort((a, b) => a.position.distance(ppos) - b.position.distance(ppos));
+    console.log(activeZombies);
     for (let i = 0; i < activeZombies.length; i++) {
       await activeZombies[i].play(level.player);
     }
@@ -1324,8 +1360,8 @@ var Map2 = class {
     return [
       [0, 0],
       [width - 1, 0],
-      [0, height - 1],
-      [width - 1, height - 1]
+      [width - 1, height - 1],
+      [0, height - 1]
     ];
   }
   isPositionValid(x, y) {
@@ -1348,13 +1384,6 @@ var Map2 = class {
   }
   getItem(x, y) {
     return this.items.find((item) => item.position[0] == x && item.position[1] == y);
-  }
-  getBlocker(x, y) {
-    let item = this.getItem(x, y);
-    if (item && item.blocks) {
-      return item;
-    }
-    return this.getBeing(x, y);
   }
   removeBeing(being) {
     this.beings = this.beings.filter((b) => b != being);
@@ -1409,6 +1438,218 @@ var Map2 = class {
     return drawables;
   }
 };
+
+// src/items/water.ts
+var Water = class extends Item {
+  visual = { ch: "\u2248", fg: WAVE.random(), bg: WATER };
+  static Name = "river";
+  get blocksMovement() {
+    return true;
+  }
+  get blocksBazooka() {
+    return false;
+  }
+  get isDestructible() {
+    return false;
+  }
+  constructor(map, x, y) {
+    super(map);
+    this._position = [x, y];
+  }
+};
+
+// src/items/bridge.ts
+var Bridge = class extends Item {
+  visual = { ch: "=", fg: WOOD[0], bg: WATER };
+  static Name = "bridge";
+  constructor(map, x, y) {
+    super(map);
+    this._position = [x, y];
+  }
+};
+
+// src/random.ts
+function randomFloat(min, max) {
+  return min + Math.random() * (max - min);
+}
+function randomInt(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+// src/terrain/river.ts
+function create(map, cornerIndex) {
+  let center = [map.width / 2, map.height / 2];
+  let corner = map.getCorners()[cornerIndex];
+  let toCenter = [center[0] - corner[0], center[1] - corner[1]];
+  let length = toCenter.norm();
+  let vecToCenter = toCenter.normalize();
+  let midDist = length * randomFloat(0.2, 0.5);
+  let midPoint = [
+    corner[0] + midDist * vecToCenter[0],
+    corner[1] + midDist * vecToCenter[1]
+  ];
+  let vecRiver = [-vecToCenter[0], vecToCenter[1]];
+  createAtPoint(map, midPoint, vecRiver, length + 6);
+}
+function createAtPoint(map, center, vecRiver, length) {
+  const thickness = randomInt(2, 4);
+  let vecNormal = [-vecRiver[1], vecRiver[0]];
+  let dScale = randomFloat(0.5, 1.5);
+  let dFrequency = randomFloat(0.1, 0.5);
+  let dOffset = randomFloat(0, 2 * Math.PI);
+  let bridgeStart = randomFloat(length * 1 / 4, length * 3 / 4);
+  let bridgeEnd = bridgeStart + 3;
+  for (let i = 0; i < length; i += 0.5) {
+    let dist = i - length / 2;
+    let distortion = dScale * Math.sin((i + dOffset) * dFrequency);
+    let isBridge = i > bridgeStart && i < bridgeEnd;
+    let cx = center[0] + dist * vecRiver[0] + distortion * vecNormal[0];
+    let cy = center[1] + dist * vecRiver[1] + distortion * vecNormal[1];
+    for (let j = 0; j < thickness; j++) {
+      let dist2 = j - thickness / 2;
+      let x = cx + dist2 * vecNormal[0];
+      let y = cy + dist2 * vecNormal[1];
+      let Ctor = isBridge ? Bridge : Water;
+      tryItem(map, Ctor, Math.round(x), Math.round(y));
+    }
+  }
+}
+function tryItem(map, Ctor, x, y) {
+  if (!map.isPositionValid(x, y)) {
+    return;
+  }
+  let item = map.getItem(x, y);
+  if (item) {
+    return;
+  }
+  let water = new Ctor(map, x, y);
+  map.addItem(water);
+}
+
+// src/items/tree.ts
+var Tree = class extends Item {
+  visual = { ch: ["\u2660", "\u2663"].random(), fg: TREE.random() };
+  static Name = "tree";
+  get blocksMovement() {
+    return true;
+  }
+  constructor(map, x, y) {
+    super(map);
+    this._position = [x, y];
+  }
+};
+
+// src/terrain/forest.ts
+function create2(map, cornerIndex) {
+  let center = [map.width / 2, map.height / 2];
+  let corner = map.getCorners()[cornerIndex];
+  let toCenter = [center[0] - corner[0], center[1] - corner[1]];
+  let midPoint = [corner[0] + Math.floor(toCenter[0] / 2), corner[1] + Math.floor(toCenter[1] / 2)];
+  createAtPoint2(map, midPoint);
+}
+function createAtPoint2(map, center) {
+  const W = 7;
+  const H = 4;
+  for (let i = -W; i <= W; i++) {
+    for (let j = -H; j <= H; j++) {
+      let dx = i / W;
+      let dy = j / H;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      if (Math.random() < dist) {
+        continue;
+      }
+      let x = center[0] + i;
+      let y = center[1] + j;
+      tryItem2(map, x, y);
+    }
+  }
+}
+function tryItem2(map, x, y) {
+  if (!map.isPositionValid(x, y)) {
+    return;
+  }
+  let item = map.getItem(x, y);
+  if (item) {
+    return;
+  }
+  let tree = new Tree(map, x, y);
+  map.addItem(tree);
+}
+
+// src/items/house.ts
+var House = class extends Barricade {
+  static Name = "house wall";
+  constructor(map, ch, x, y) {
+    super(map);
+    this.visual.ch = ch;
+    this._position = [x, y];
+  }
+};
+
+// src/items/window.ts
+var Window = class extends Item {
+  static Name = "window";
+  visual = { fg: WINDOW, ch: "" };
+  get blocksMovement() {
+    return true;
+  }
+  constructor(map, ch, x, y) {
+    super(map);
+    this.visual.ch = ch;
+    this._position = [x, y];
+  }
+};
+
+// src/terrain/house.ts
+var W_HALF = [3, 5];
+var H_HALF = [2, 4];
+var X_RANGE = 5;
+var Y_RANGE = 3;
+function create3(map) {
+  let W = randomInt(...W_HALF);
+  let H = randomInt(...H_HALF);
+  let center = [Math.round(map.width / 2), Math.round(map.height / 2)];
+  center[0] += randomInt(-X_RANGE, X_RANGE);
+  center[1] += randomInt(-Y_RANGE, Y_RANGE);
+  for (let i = -W; i <= W; i++) {
+    for (let j = -H; j <= H; j++) {
+      let x = center[0] + i;
+      let y = center[1] + j;
+      let verticalEdge = i == -W || i == W;
+      let horizontalEdge = j == -H || j == H;
+      let empty = false;
+      if (i == 0 || j == 0) {
+        empty = true;
+      }
+      if (!verticalEdge && !horizontalEdge) {
+        empty = true;
+      }
+      if (empty) {
+        let item = map.getItem(x, y);
+        item && map.removeItem(item);
+        continue;
+      }
+      tryItem3(map, x, y, verticalEdge, horizontalEdge);
+    }
+  }
+  return center;
+}
+function tryItem3(map, x, y, vertical, horizontal) {
+  if (!map.isPositionValid(x, y)) {
+    return;
+  }
+  let item = map.getItem(x, y);
+  item && map.removeItem(item);
+  let i;
+  if (vertical && horizontal) {
+    i = new House(map, "+", x, y);
+  } else {
+    let Ctor = Math.random() > 0.5 ? House : Window;
+    let ch = vertical ? "|" : "-";
+    i = new Ctor(map, ch, x, y);
+  }
+  map.addItem(i);
+}
 
 // src/dialogs/gameover.ts
 async function gameOver(level) {
@@ -1544,6 +1785,7 @@ var Level = class {
     this.zombies = zombies;
     let player = new Player(this);
     this.player = player;
+    this.setupTerrain();
     this.updateStatus();
   }
   get zombieMoveChance() {
@@ -1606,92 +1848,24 @@ var Level = class {
     await zombies.play();
     await flush();
   }
-};
-
-// src/items/water.ts
-var Water = class extends Item {
-  visual = { ch: "\u2248", fg: "dodgerblue", bg: "darkblue" };
-  blocks = true;
-  destructible = false;
-  static Name = "river";
-  constructor(map, x, y) {
-    super(map);
-    this._position = [x, y];
-  }
-};
-
-// src/terrain/river.ts
-function create(map) {
-  let center = [Math.floor(map.width / 2), Math.floor(map.height / 2)];
-  let corner = map.getCorners()[3];
-  let toCenter = [center[0] - corner[0], center[1] - corner[1]];
-  let length = toCenter.norm();
-  let vecToCenter = toCenter.normalize();
-  let midDist = length * 0.5;
-  let midPoint = [
-    corner[0] + midDist * vecToCenter[0],
-    corner[1] + midDist * vecToCenter[1]
-  ];
-  let vecRiver = [-vecToCenter[0], vecToCenter[1]];
-  createAtPoint(map, midPoint, vecRiver, length + 6);
-}
-function createAtPoint(map, center, vecRiver, length) {
-  const thickness = 3;
-  let vecNormal = [-vecRiver[1], vecRiver[0]];
-  let dScale = 1;
-  let dFrequency = 0.4;
-  let dOffset = 10;
-  console.log("center", center, "vecRiver", vecRiver, "length", length);
-  for (let i = 0; i < length; i += 0.5) {
-    let dist = i - length / 2;
-    let distortion = dScale * Math.sin((i + dOffset) * dFrequency);
-    let cx = center[0] + dist * vecRiver[0] + distortion * vecNormal[0];
-    let cy = center[1] + dist * vecRiver[1] + distortion * vecNormal[1];
-    for (let j = 0; j < thickness; j++) {
-      let dist2 = j - thickness / 2;
-      let x = cx + dist2 * vecNormal[0];
-      let y = cy + dist2 * vecNormal[1];
-      tryWater(map, Math.round(x), Math.round(y));
-    }
-  }
-}
-function tryWater(map, x, y) {
-  if (!map.isPositionValid(x, y)) {
-    return;
-  }
-  let item = map.getItem(x, y);
-  if (item) {
-    return;
-  }
-  let water = new Water(map, x, y);
-  map.addItem(water);
-}
-
-// src/levels/sandbox.ts
-var Sandbox = class extends Level {
-  static Name = "Sandbox";
-  static description = "unlimited resources, unlimited carnage";
-  constructor(renderer) {
-    super(renderer);
+  setupTerrain() {
     const { map, player } = this;
-    create(map);
-    let x = Math.floor(map.width / 2);
-    let y = Math.floor(map.height / 2);
-    player.position = [x, y];
+    let riverIndex = randomInt(0, 3);
+    create(map, riverIndex);
+    let forestIndex = (riverIndex + 2) % 4;
+    create2(map, forestIndex);
+    let center = create3(map);
+    player.position = center;
     map.addBeing(player);
-    player.setItem("rake", Infinity);
-    player.setItem("barricade", Infinity);
-    player.setItem("trap", Infinity);
-    player.setItem("mine", Infinity);
-    player.setItem("bazooka", Infinity);
-    player.setItem("wire", Infinity);
-    player.setItem("fence", Infinity);
   }
-  isAllowed(feature) {
-    if (feature == "shop") {
-      return false;
-    }
-    return super.isAllowed(feature);
+};
+
+// src/levels/regular.ts
+var Regular = class extends Level {
+  static Name = "Regular";
+  static description = "Survive for as long as possible. Limited starting resources, unlimited zombies.";
+  get initialMoney() {
+    return 10;
   }
 };
 
@@ -1704,7 +1878,7 @@ async function run() {
   let renderer = new RCtor2();
   document.querySelector("main").prepend(renderer.node);
   while (true) {
-    await new Sandbox(renderer).play();
+    await new Regular(renderer).play();
   }
 }
 run();

@@ -1,4 +1,5 @@
 import Item from "./item.js";
+import Entity from "../entity.js";
 import * as log from "../log.js";
 import { explode } from "../explosion.js";
 import * as sfx from "../sfx.js";
@@ -26,7 +27,15 @@ export default class Bazooka extends Item {
 				break;
 			}
 
-			let target = map.getBlocker(tx, ty);
+			let being = map.getBeing(tx, ty);
+			let item = map.getItem(tx, ty);
+			let target: Entity;
+			if (being) {
+				target = being;
+			} else if (item && item.blocksBazooka) {
+				target = item;
+			}
+
 			if (target) {  // hit!
 				log.add(`${target.name.article()} is hit!`);
 				sfx.play("bazooka"); // fixme play earlier
