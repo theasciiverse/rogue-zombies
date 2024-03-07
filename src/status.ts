@@ -3,19 +3,24 @@ import Level from "./levels/level.js";
 import { ITEMS, ItemTemplate } from "./items/db.js"
 
 
-const node = document.querySelector<HTMLElement>("#status")!;
+export const node = document.querySelector<HTMLElement>("#status")!;
 
-let previousValues: Record<string, number> = {};
-let DOM_ITEMS: Record<string, HTMLElement> = {};
-let DOM_MISC: Record<string, HTMLElement> = {};
+let previousValues: Record<string, number>;
+let DOM_ITEMS: Record<string, HTMLElement>;
+let DOM_MISC: Record<string, HTMLElement>;
 
-export function init() {
+export function reset() {
+	previousValues = {};
+	DOM_ITEMS = {};
+	DOM_MISC = {};
+
 	ITEMS.forEach(it => DOM_ITEMS[it.id] = buildItem(it));
 
 	DOM_MISC["hp"] = buildHP();
 	DOM_MISC["money"] = buildMoney();
 	DOM_MISC["start"] = buildStart();
 	DOM_MISC["score"] = buildScore();
+	DOM_MISC["rounds"] = buildRounds();
 	DOM_MISC["shop"] = buildShop();
 	DOM_MISC["help"] = buildHelp();
 
@@ -23,7 +28,7 @@ export function init() {
 		...Object.values(DOM_ITEMS),
 		"\n",
 		DOM_MISC["hp"], DOM_MISC["money"], DOM_MISC["start"],
-		DOM_MISC["score"], DOM_MISC["shop"], DOM_MISC["help"]
+		DOM_MISC["score"], DOM_MISC["rounds"], DOM_MISC["shop"], DOM_MISC["help"]
 	];
 
 	node.replaceChildren(...nodes);
@@ -43,6 +48,7 @@ export function update(level: Level) {
 	updateMoney(level);
 	updateStart(level);
 	updateScore(level);
+	updateRounds(level);
 	updateShop(level);
 }
 
@@ -96,6 +102,20 @@ function updateScore(level: Level) {
 	let score = level.score;
 	span.textContent = String(score);
 	animateIfChanged(span, score);
+}
+
+function buildRounds() {
+	let node = document.createElement("span");
+	node.innerHTML = `  Rounds: <span class="rounds"></span>`;
+	return node;
+}
+
+function updateRounds(level: Level) {
+	let node = DOM_MISC["rounds"];
+	node.hidden = !level.isAllowed("score");
+
+	let span = node.querySelector(".rounds")!;
+	span.textContent = String(level.rounds);
 }
 
 function buildStart() {

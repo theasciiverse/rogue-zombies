@@ -575,37 +575,52 @@ var Bazooka = class extends Item {
     const { map, visual } = this;
     play("swoosh");
     add("You launch a rocket...");
-    let tx = position[0];
-    let ty = position[1];
-    while (true) {
-      tx += direction[0];
-      ty += direction[1];
-      if (!map.isPositionValid(tx, ty)) {
-        add("it flies away.");
-        break;
-      }
-      let being = map.getBeing(tx, ty);
-      let item = map.getItem(tx, ty);
-      let target;
-      if (being) {
-        target = being;
-      } else if (item && item.blocksBazooka) {
-        target = item;
-      }
-      if (target) {
-        add(`${target.name.article()} is hit!`);
+    let { target, distance } = getTarget(map, position, direction);
+    let hitPlayed = false;
+    let [x, y] = position;
+    for (let i = 0; i < distance; i++) {
+      x += direction[0];
+      y += direction[1];
+      if (target && !hitPlayed && distance - i < 10) {
         play("bazooka");
-        await explode(map, [tx, ty], 2, this);
-        break;
-      } else {
-        map.setFX(tx, ty, visual);
-        await sleep2(50);
-        map.setFX(tx, ty, null);
+        hitPlayed = true;
       }
+      map.setFX(x, y, visual);
+      await sleep2(50);
+      map.setFX(x, y, null);
+    }
+    if (target) {
+      add(`${target.name.article()} is hit!`);
+      await explode(map, [x, y], 2, this);
+    } else {
+      add("it flies away.");
     }
     return true;
   }
 };
+function getTarget(map, position, direction) {
+  let [x, y] = position;
+  let distance = 0;
+  while (true) {
+    x += direction[0];
+    y += direction[1];
+    if (!map.isPositionValid(x, y)) {
+      return { target: null, distance };
+    }
+    distance++;
+    let being = map.getBeing(x, y);
+    let item = map.getItem(x, y);
+    let target;
+    if (being) {
+      target = being;
+    } else if (item && item.blocksBazooka) {
+      target = item;
+    }
+    if (target) {
+      return { target, distance };
+    }
+  }
+}
 function sleep2(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -976,15 +991,19 @@ var MOVEMENT = {
 
 // src/status.ts
 var node2 = document.querySelector("#status");
-var previousValues = {};
-var DOM_ITEMS = {};
-var DOM_MISC = {};
-function init3() {
+var previousValues;
+var DOM_ITEMS;
+var DOM_MISC;
+function reset() {
+  previousValues = {};
+  DOM_ITEMS = {};
+  DOM_MISC = {};
   ITEMS.forEach((it) => DOM_ITEMS[it.id] = buildItem(it));
   DOM_MISC["hp"] = buildHP();
   DOM_MISC["money"] = buildMoney();
   DOM_MISC["start"] = buildStart();
   DOM_MISC["score"] = buildScore();
+  DOM_MISC["rounds"] = buildRounds();
   DOM_MISC["shop"] = buildShop();
   DOM_MISC["help"] = buildHelp();
   let nodes = [
@@ -994,6 +1013,7 @@ function init3() {
     DOM_MISC["money"],
     DOM_MISC["start"],
     DOM_MISC["score"],
+    DOM_MISC["rounds"],
     DOM_MISC["shop"],
     DOM_MISC["help"]
   ];
@@ -1011,6 +1031,7 @@ function update(level) {
   updateMoney(level);
   updateStart(level);
   updateScore(level);
+  updateRounds(level);
   updateShop(level);
 }
 function buildHP() {
@@ -1054,6 +1075,17 @@ function updateScore(level) {
   let score = level.score;
   span.textContent = String(score);
   animateIfChanged(span, score);
+}
+function buildRounds() {
+  let node3 = document.createElement("span");
+  node3.innerHTML = `  Rounds: <span class="rounds"></span>`;
+  return node3;
+}
+function updateRounds(level) {
+  let node3 = DOM_MISC["rounds"];
+  node3.hidden = !level.isAllowed("score");
+  let span = node3.querySelector(".rounds");
+  span.textContent = String(level.rounds);
 }
 function buildStart() {
   let node3 = document.createElement("span");
@@ -1860,25 +1892,42 @@ var Level = class {
   }
 };
 
-// src/levels/regular.ts
-var Regular = class extends Level {
-  static Name = "Regular";
-  static description = "Survive for as long as possible. Limited starting resources, unlimited zombies.";
-  get initialMoney() {
-    return 10;
+// src/levels/sandbox.ts
+var Sandbox = class extends Level {
+  static Name = "Sandbox";
+  static description = "unlimited resources, unlimited carnage";
+  constructor(renderer) {
+    super(renderer);
+    const { player } = this;
+    player.setItem("rake", Infinity);
+    player.setItem("barricade", Infinity);
+    player.setItem("trap", Infinity);
+    player.setItem("mine", Infinity);
+    player.setItem("bazooka", Infinity);
+    player.setItem("wire", Infinity);
+    player.setItem("fence", Infinity);
+  }
+  isAllowed(feature) {
+    if (feature == "shop") {
+      return false;
+    }
+    return super.isAllowed(feature);
   }
 };
 
 // src/index.ts
 async function run() {
   let RCtor2 = Combo;
+  let main = document.querySelector("main");
   await init([43, 30], RCtor2);
   init2();
-  init3();
-  let renderer = new RCtor2();
-  document.querySelector("main").prepend(renderer.node);
   while (true) {
-    await new Regular(renderer).play();
+    reset();
+    clear();
+    let renderer = new RCtor2();
+    main.replaceChildren(renderer.node, node2, node);
+    await new Sandbox(renderer).play();
+    main.replaceChildren();
   }
 }
 run();

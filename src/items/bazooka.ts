@@ -1,4 +1,5 @@
 import Item from "./item.js";
+import Map from "../map.js";
 import Entity from "../entity.js";
 import * as log from "../log.js";
 import { explode } from "../explosion.js";
@@ -16,40 +17,58 @@ export default class Bazooka extends Item {
 		sfx.play("swoosh");
 		log.add("You launch a rocket...");
 
-		let tx = position[0];
-		let ty = position[1];
-		while (true) {
-			tx += direction[0];
-			ty += direction[1];
+		let {target, distance} = getTarget(map, position, direction);
+		let hitPlayed = false;
 
-			if (!map.isPositionValid(tx, ty)) {
-				log.add("it flies away.");
-				break;
+		let [x, y] = position;
+		for (let i=0;i<distance;i++) {
+			x += direction[0];
+			y += direction[1];
+
+			if (target && !hitPlayed && (distance-i) < 10) {
+				sfx.play("bazooka");
+				hitPlayed = true;
 			}
 
-			let being = map.getBeing(tx, ty);
-			let item = map.getItem(tx, ty);
-			let target: Entity;
-			if (being) {
-				target = being;
-			} else if (item && item.blocksBazooka) {
-				target = item;
-			}
+			map.setFX(x, y, visual);
+			await sleep(50);
+			map.setFX(x, y, null);
+		}
 
-			if (target) {  // hit!
-				log.add(`${target.name.article()} is hit!`);
-				sfx.play("bazooka"); // fixme play earlier
-				await explode(map, [tx, ty], 2, this);
-				break;
-			} else {  // fly further
-				map.setFX(tx, ty, visual);
-				await sleep(50);
-				map.setFX(tx, ty, null);
-			}
+		if (target) {
+			log.add(`${target.name.article()} is hit!`);
+			await explode(map, [x, y], 2, this);
+		} else {
+			log.add("it flies away.");
 		}
 
 		return true;
 	}
 }
+
+function getTarget(map: Map, position: number[], direction: number[]) {
+	let [x, y] = position;
+	let distance = 0;
+
+	while (true) {
+		x += direction[0];
+		y += direction[1];
+
+		if (!map.isPositionValid(x, y)) { return {target:null, distance}; }
+
+		distance++;
+		let being = map.getBeing(x, y);
+		let item = map.getItem(x, y);
+		let target: Entity;
+		if (being) {
+			target = being;
+		} else if (item && item.blocksBazooka) {
+			target = item;
+		}
+
+		if (target) { return {target, distance}; }
+	}
+}
+
 
 function sleep(ms: number) { return new Promise<void>(resolve => setTimeout(resolve, ms)); }

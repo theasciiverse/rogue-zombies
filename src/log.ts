@@ -7,7 +7,7 @@ interface HistoryItem {
 	length: number;
 }
 
-const node = document.querySelector<HTMLElement>("#log")!;
+export const node = document.querySelector<HTMLElement>("#log")!;
 
 let shown: HistoryItem[] = [];
 let pending: HistoryItem[] = [];
