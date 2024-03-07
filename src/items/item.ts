@@ -9,6 +9,7 @@ export default abstract class Item extends Entity {
 	static description = "";
 
 	readonly blocks: boolean = false;
+	readonly destructible: boolean = true;
 
 	get name() { return (this.constructor as typeof Item).Name; }
 	die(source: Entity) { this.map.removeItem(this); }

@@ -1,5 +1,6 @@
 import Level, { Feature } from "./level.js";
 import Renderer from "../renderer/renderer.js";
+import * as river from "../terrain/river.js";
 
 
 export default class Sandbox extends Level {
@@ -10,6 +11,8 @@ export default class Sandbox extends Level {
 		super(renderer);
 
 		const { map, player } = this;
+
+		river.create(map);
 
 		let x = Math.floor(map.width / 2);
 		let y = Math.floor(map.height / 2);

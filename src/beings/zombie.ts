@@ -62,7 +62,6 @@ export default class Zombie extends Being {
 		const { map, position } = this;
 		if (!map.isPositionValid(x, y)) { return {type:"invalid"}; } // out of area
 
-		// fixme indestructible items here
 
 		let being = map.getBeing(x, y);
 		if (being) { // surrounding zombies are ignored, player is immediately attacked
@@ -75,10 +74,19 @@ export default class Zombie extends Being {
 		if (dist > currentDistance) { return {type:"invalid"}; } // pohorsime si
 
 		let item = map.getItem(x, y);
-		if (item && item.blocks) {
-			return {type:"item", dist, item};
+
+		if (item) {
+			if (item.blocks) {
+				if (item.destructible) {
+					return {type:"item", dist, item};
+				} else {
+					return {type:"invalid"};
+				}
+			} else {
+				return {type:"move", dist, position:[x, y], item};
+			}
 		} else {
-			return {type:"move", dist, position:[x, y], item};
+			return {type:"move", dist, position:[x, y]};
 		}
 	}
 }

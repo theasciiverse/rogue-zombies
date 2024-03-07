@@ -22,6 +22,13 @@ Array.prototype.distance = function(other) {
   let dy = Math.abs(this[1] - other[1]);
   return Math.max(dx, dy);
 };
+Array.prototype.norm = function() {
+  return Math.sqrt(this[0] * this[0] + this[1] * this[1]);
+};
+Array.prototype.normalize = function() {
+  let norm = this.norm();
+  return this.map(($) => $ / norm);
+};
 
 // src/metrics.ts
 var tileCount;
@@ -207,6 +214,7 @@ var Item = class extends Entity {
   static Name = "";
   static description = "";
   blocks = false;
+  destructible = true;
   get name() {
     return this.constructor.Name;
   }
@@ -422,10 +430,18 @@ var Zombie = class extends Being {
       return { type: "invalid" };
     }
     let item = map.getItem(x, y);
-    if (item && item.blocks) {
-      return { type: "item", dist, item };
+    if (item) {
+      if (item.blocks) {
+        if (item.destructible) {
+          return { type: "item", dist, item };
+        } else {
+          return { type: "invalid" };
+        }
+      } else {
+        return { type: "move", dist, position: [x, y], item };
+      }
     } else {
-      return { type: "move", dist, position: [x, y], item };
+      return { type: "move", dist, position: [x, y] };
     }
   }
 };
@@ -1154,7 +1170,7 @@ var DOM = class extends Renderer {
         dnode.style.backgroundColor = visual.bg;
       }
       if (visual.fg) {
-        dnode.style.color = visual.fg;
+        dnode.style.color = i + 1 == drawables.length ? visual.fg : "transparent";
       }
       if (visual.ch) {
         dnode.textContent = visual.ch;
@@ -1349,10 +1365,6 @@ var Map2 = class {
     this.items = this.items.filter((i) => i != item);
     this.renderer.remove(item);
     this.redraw(item.position);
-  }
-  setBackground(x, y, visual) {
-    this.bg.set(x, y, visual);
-    this.redraw([x, y]);
   }
   setFX(x, y, visual) {
     const { fx } = this;
@@ -1596,35 +1608,90 @@ var Level = class {
   }
 };
 
-// src/items/house.ts
-var House = class extends Item {
-  visual = { ch: "#", fg: "saddlebrown", bg: "black" };
+// src/items/water.ts
+var Water = class extends Item {
+  visual = { ch: "\u2248", fg: "dodgerblue", bg: "darkblue" };
   blocks = true;
-  _hp = 3;
+  destructible = false;
+  static Name = "river";
   constructor(map, x, y) {
     super(map);
     this._position = [x, y];
   }
 };
 
-// src/levels/regular.ts
-var Regular = class extends Level {
-  static Name = "Regular";
-  static description = "Survive for as long as possible. Limited starting resources, unlimited zombies.";
+// src/terrain/river.ts
+function create(map) {
+  let center = [Math.floor(map.width / 2), Math.floor(map.height / 2)];
+  let corner = map.getCorners()[3];
+  let toCenter = [center[0] - corner[0], center[1] - corner[1]];
+  let length = toCenter.norm();
+  let vecToCenter = toCenter.normalize();
+  let midDist = length * 0.5;
+  let midPoint = [
+    corner[0] + midDist * vecToCenter[0],
+    corner[1] + midDist * vecToCenter[1]
+  ];
+  let vecRiver = [-vecToCenter[0], vecToCenter[1]];
+  createAtPoint(map, midPoint, vecRiver, length + 6);
+}
+function createAtPoint(map, center, vecRiver, length) {
+  const thickness = 3;
+  let vecNormal = [-vecRiver[1], vecRiver[0]];
+  let dScale = 1;
+  let dFrequency = 0.4;
+  let dOffset = 10;
+  console.log("center", center, "vecRiver", vecRiver, "length", length);
+  for (let i = 0; i < length; i += 0.5) {
+    let dist = i - length / 2;
+    let distortion = dScale * Math.sin((i + dOffset) * dFrequency);
+    let cx = center[0] + dist * vecRiver[0] + distortion * vecNormal[0];
+    let cy = center[1] + dist * vecRiver[1] + distortion * vecNormal[1];
+    for (let j = 0; j < thickness; j++) {
+      let dist2 = j - thickness / 2;
+      let x = cx + dist2 * vecNormal[0];
+      let y = cy + dist2 * vecNormal[1];
+      tryWater(map, Math.round(x), Math.round(y));
+    }
+  }
+}
+function tryWater(map, x, y) {
+  if (!map.isPositionValid(x, y)) {
+    return;
+  }
+  let item = map.getItem(x, y);
+  if (item) {
+    return;
+  }
+  let water = new Water(map, x, y);
+  map.addItem(water);
+}
+
+// src/levels/sandbox.ts
+var Sandbox = class extends Level {
+  static Name = "Sandbox";
+  static description = "unlimited resources, unlimited carnage";
   constructor(renderer) {
     super(renderer);
     const { map, player } = this;
-    player.position = [15, 15];
+    create(map);
+    let x = Math.floor(map.width / 2);
+    let y = Math.floor(map.height / 2);
+    player.position = [x, y];
     map.addBeing(player);
-    [
-      new House(map, 10, 10),
-      new House(map, 11, 10),
-      new House(map, 12, 10),
-      new House(map, 12, 11)
-    ].forEach((h) => map.addItem(h));
+    player.setItem("rake", Infinity);
+    player.setItem("barricade", Infinity);
+    player.setItem("trap", Infinity);
+    player.setItem("mine", Infinity);
+    player.setItem("bazooka", Infinity);
+    player.setItem("wire", Infinity);
+    player.setItem("fence", Infinity);
   }
-  get initialMoney() {
-    return 10;
+  isAllowed(feature) {
+    if (feature == "shop") {
+      return false;
+    }
+    return super.isAllowed(feature);
   }
 };
 
@@ -1637,7 +1704,7 @@ async function run() {
   let renderer = new RCtor2();
   document.querySelector("main").prepend(renderer.node);
   while (true) {
-    await new Regular(renderer).play();
+    await new Sandbox(renderer).play();
   }
 }
 run();
