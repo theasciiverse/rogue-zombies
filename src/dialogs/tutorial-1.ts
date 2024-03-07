@@ -14,7 +14,7 @@ export default async function tutorial1() {
 }
 
 const HTML = `
-<p>Welcome to the Rogue Zombies tutorial! You can move around using arrows, numpad or vi-keys (hjkl/yubn).</p>
+<p>Welcome to the Rogue Zombies tutorial! You can move around using arrows (←↓↑→), numpad or vi-keys (hjkl/yubn). It is possible and recommended to move diagonally as well.</p>
 <p>There is a lone zombie nearby. You can kill it by <em>bumping</em> into it, i.e. by trying to move to the zombie's place. Do that right now!</p>
 <p>Press <kbd>esc</kbd> to continue.</p>
 `;

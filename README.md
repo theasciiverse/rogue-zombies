@@ -2,6 +2,11 @@
 
 WIP!
 
+- [Play the game!]()
+- [Manual](MANUAL.md)
+- [Credits](CREDITS.md)
+- [MIT License](LICENSE.md)
+
 
 ## The Plan
 
