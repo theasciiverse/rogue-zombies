@@ -110,7 +110,7 @@ function updateStart(level: Level) {
 
 function buildShop() {
 	let node = document.createElement("span");
-	node.append("  ", buildKey("S", "hop"));
+	node.append("  ", buildKey("I", "tems"));
 	return node;
 }
 

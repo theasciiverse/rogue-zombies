@@ -810,7 +810,7 @@ var Player = class extends Being {
       let num = key.code.match(/\d/);
       return num ? this.tryItem(num[0]) : false;
     }
-    if (key.key == "s" && level.isAllowed("shop")) {
+    if (key.key == "i" && level.isAllowed("shop")) {
       await level.shop();
       return false;
     }
@@ -1016,7 +1016,7 @@ function updateStart(level) {
 }
 function buildShop() {
   let node3 = document.createElement("span");
-  node3.append("  ", buildKey("S", "hop"));
+  node3.append("  ", buildKey("I", "tems"));
   return node3;
 }
 function updateShop(level) {
@@ -1592,7 +1592,7 @@ async function tutorial1() {
   await dialog.show();
 }
 var HTML2 = `
-<p>Welcome to the Rogue Zombies tutorial! You can move around using arrows, numpad or vi-keys (hjkl/yubn).</p>
+<p>Welcome to the Rogue Zombies tutorial! You can move around using arrows (\u2190\u2193\u2191\u2192), numpad or vi-keys (hjkl/yubn). It is possible and recommended to move diagonally as well.</p>
 <p>There is a lone zombie nearby. You can kill it by <em>bumping</em> into it, i.e. by trying to move to the zombie's place. Do that right now!</p>
 <p>Press <kbd>esc</kbd> to continue.</p>
 `;
@@ -1610,7 +1610,7 @@ var HTML3 = `
 <p>Good job! No more zombies in sight. Also, by killing the zombie, you earned your first money.</p>
 <p>Of course, fighting zombies by <em>bumping</em> into them would not work for long.
 The best way to combat these undead folks is by using <strong>items</strong>.
-When in the game, you can always open the item shop with the <kbd>S</kbd> key.</p>
+When in the game, you can always open the item shop with the <kbd>I</kbd> key.</p>
 <p>It would be wise to try that out now. Press <kbd>esc</kbd> to continue and use the earned money to buy <strong>a rake</strong>.</p>
 `;
 
@@ -1641,9 +1641,10 @@ async function tutorial4() {
   await dialog.show();
 }
 var HTML5 = `
-<p>The tutorial is almost over. You can move around and kill zombies with stuff - like a boss.</p>
+<p>The tutorial is almost over. You can move around and kill zombies with stuff - like a boss.
+The Sandbox game mode is a good way to familiarize yourself with other items that can be bought.</p>
 <p>In a typical game, you start in preparation phase in order to buy items and organize your defenses.
-The real heat is then started by pressing the <kbd>FIXME</kbd> key. This is where the action begins.</p>
+The real heat is then started by pressing the <kbd>S</kbd> key. This is where the action begins.</p>
 <p>In this tutorial, only four more zombies will spawn once you do that. Press <kbd>esc</kbd> and start the invasion when ready.</p>
 `;
 
@@ -1654,10 +1655,9 @@ var Tutorial = class extends Level {
   phase = "movement";
   constructor(renderer) {
     super(renderer);
-    const { map, player, zombies } = this;
+    const { map, player } = this;
     player.position = [5, map.height - 5];
     map.addBeing(player);
-    zombies.spawnAt(map.width - 10, 10);
   }
   isAllowed(feature) {
     if (feature == "spawn") {
@@ -1670,8 +1670,11 @@ var Tutorial = class extends Level {
     }
     return super.isAllowed(feature);
   }
+  get done() {
+    return this.player.hp <= 0 || this.score == 6;
+  }
   async play() {
-    await this.help();
+    await this.changePhase("movement");
     return super.play();
   }
   start() {
@@ -1683,7 +1686,6 @@ var Tutorial = class extends Level {
     super.start();
   }
   help() {
-    play("ping");
     switch (this.phase) {
       case "movement":
         return tutorial1();
@@ -1696,31 +1698,36 @@ var Tutorial = class extends Level {
     }
   }
   async shop() {
-    const { player, zombies, map } = this;
+    const { player } = this;
     await shop(player, { only: "rake" });
     if (player.getItem("rake") > 0 && this.phase == "buying") {
-      this.phase = "using";
-      await sleep3(1e3);
-      let pos = getDistantCorner(map, player);
-      zombies.spawnAt(pos[0], pos[1]);
-      await this.help();
+      await this.changePhase("using");
     }
   }
   async playRound() {
     if (this.score == 1 && this.phase == "movement") {
-      this.phase = "buying";
-      await sleep3(1e3);
-      await this.help();
+      await this.changePhase("buying");
     }
     if (this.score == 2 && this.phase == "using") {
-      this.phase = "starting";
-      await sleep3(1e3);
-      await this.help();
+      await this.changePhase("starting");
     }
     return super.playRound();
   }
-  get done() {
-    return this.player.hp <= 0 || this.score == 6;
+  async changePhase(phase) {
+    const { player, zombies, map } = this;
+    this.phase = phase;
+    await sleep3(1e3);
+    switch (phase) {
+      case "movement":
+        zombies.spawnAt(map.width - 10, 10);
+        break;
+      case "using":
+        let pos = getDistantCorner(map, player);
+        zombies.spawnAt(pos[0], pos[1]);
+        break;
+    }
+    play("ping");
+    await this.help();
   }
 };
 function sleep3(ms) {

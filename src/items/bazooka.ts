@@ -29,7 +29,7 @@ export default class Bazooka extends Item {
 			let target = map.getBlocker(tx, ty);
 			if (target) {  // hit!
 				log.add(`${target.name.article()} is hit!`);
-				sfx.play("bazooka");
+				sfx.play("bazooka"); // fixme play earlier
 				await explode(map, [tx, ty], 2, this);
 				break;
 			} else {  // fly further
