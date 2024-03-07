@@ -21,12 +21,10 @@ export default class Tutorial extends Level {
 	constructor(renderer: Renderer) {
 		super(renderer);
 
-		const { map, player, zombies } = this;
+		const { map, player } = this;
 
 		player.position = [5, map.height-5];
 		map.addBeing(player);
-
-		zombies.spawnAt(map.width-10, 10);
 	}
 
 	isAllowed(feature: Feature) {
@@ -39,8 +37,10 @@ export default class Tutorial extends Level {
 		return super.isAllowed(feature);
 	}
 
+	protected get done() { return (this.player.hp <= 0 || this.score == 6); }
+
 	async play() {
-		await this.help(); // tutorial1
+		await this.changePhase("movement");
 		return super.play();
 	}
 
@@ -54,9 +54,7 @@ export default class Tutorial extends Level {
 		super.start();
 	}
 
-
 	help() {
-		sfx.play("ping");
 		switch (this.phase) {
 			case "movement": return tutorial1();
 			case "buying": return tutorial2();
@@ -66,35 +64,46 @@ export default class Tutorial extends Level {
 	}
 
 	async shop() {
-		const { player, zombies, map } = this;
+		const { player } = this;
 		await shop(player, {only:"rake"});
 
 		if (player.getItem("rake") > 0 && this.phase == "buying") {
-			this.phase = "using";
-			await sleep(1000);
-			let pos = getDistantCorner(map, player);
-			zombies.spawnAt(pos[0], pos[1]);
-			await this.help(); // tutorial3
+			await this.changePhase("using");
 		}
 	}
 
 	protected async playRound() {
 		if (this.score == 1 && this.phase == "movement") {
-			this.phase = "buying";
-			await sleep(1000);
-			await this.help(); // tutorial2
+			await this.changePhase("buying");
 		}
 
 		if (this.score == 2 && this.phase == "using") {
-			this.phase = "starting";
-			await sleep(1000);
-			await this.help(); // tutorial4
+			await this.changePhase("starting");
 		}
 
 		return super.playRound();
 	}
 
-	protected get done() { return (this.player.hp <= 0 || this.score == 6); }
+	protected async changePhase(phase: Phase) {
+		const { player, zombies, map } = this;
+
+		this.phase = phase;
+		await sleep(1000);
+
+		switch (phase) {
+			case "movement":
+				zombies.spawnAt(map.width-10, 10);
+			break;
+
+			case "using":
+				let pos = getDistantCorner(map, player);
+				zombies.spawnAt(pos[0], pos[1]);
+			break;
+		}
+
+		sfx.play("ping");
+		await this.help();
+	}
 }
 
 function sleep(ms: number) { return new Promise<void>(resolve => setTimeout(resolve, ms)); }
