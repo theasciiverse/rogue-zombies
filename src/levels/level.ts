@@ -84,7 +84,7 @@ export default class Level {
 	protected async playRound() {
 		const { player, zombies } = this;
 
-		this._rounds++;
+		if (this._started) { this._rounds++; }
 		this.updateStatus();
 
 		await player.play();

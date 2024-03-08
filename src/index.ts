@@ -10,20 +10,20 @@ import Combo from "./renderer/combo.js";
 import Canvas from "./renderer/canvas.js";
 import DOM from "./renderer/dom.js";
 
-import Ctor from "./levels/regular.js"
+import Ctor from "./levels/tutorial.js"
 
 
 async function run() {
-	let RCtor = Combo;
+	let RCtor = Canvas;
 	let main = document.querySelector("main")!;
 
-	await metrics.init([43, 30], RCtor);
+	await metrics.init([43*2, 30], RCtor);
 	sfx.init();
 
-//	await welcome();
+	await welcome();
 
 	while (true) {
-//		let Ctor = await pickLevel();
+		let Ctor = await pickLevel();
 		status.reset();
 		log.clear();
 

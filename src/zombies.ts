@@ -1,5 +1,4 @@
 import Zombie from "./beings/zombie.js";
-import Map from "./map.js";
 import Level from "./levels/level.js";
 import * as sfx from "./sfx.js";
 
@@ -20,7 +19,6 @@ export default class Zombies {
 
 		// podle vzdalenosti od hrace, nejblizsi se hybou jako prvni
 		activeZombies.sort((a, b) => a.position.distance(ppos) - b.position.distance(ppos));
-		console.log(activeZombies);
 
 		for (let i=0; i<activeZombies.length;i++) {
 			await activeZombies[i].play(level.player);
