@@ -64,12 +64,12 @@ export default class Player extends Being {
 			return (num ? this.tryItem(num[0]) : false);
 		}
 
-		if (key.key == "i" && level.isAllowed("shop")) {
+		if (["i", "I"].includes(key.key) && level.isAllowed("shop")) {
 			await level.shop();
 			return false;
 		}
 
-		if (key.key == "s" && level.isAllowed("start")) { // FIXM
+		if (["s", "S"].includes(key.key) && level.isAllowed("start")) {
 			let result = await start();
 			if (result) {
 				level.start();
@@ -82,12 +82,6 @@ export default class Player extends Being {
 		if (key.key == "?") {
 			await level.help();
 			return false;
-		}
-
-		if (key.key == "q") {
-			this._hp = 1;
-			this.damage(this);
-			return true;
 		}
 
 		return false;
@@ -151,6 +145,7 @@ export default class Player extends Being {
 	damage(source: Entity) {
 		log.add(`${source.name.article().capitalize()} hits you!`);
 		super.damage(source);
+		if (this._hp > 0) { sfx.play("ow"); }
 		this.level.updateStatus();
 	}
 

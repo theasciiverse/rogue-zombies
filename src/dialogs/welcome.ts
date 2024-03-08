@@ -18,6 +18,7 @@ let HTML = `
 	<p>A bit of warning: this is a roguelike game created for the 2024 7DRL challenge. It may contain bugs, surprising UI/UX and possibly even a lutefisk. You can find more details at the <a href="https://github.com/ondras/roguezombies">game's GitHub repository</a>.</p>
 	<p>Recommendations:</p>
 	<ul>
+		<li>this game is played using <strong>keyboard only</strong></li>
 		<li>browser window size of at least 800×600 pixels</li>
 		<li>audio on (game uses sound effects)</li>
 		<li>background music (<a href="https://www.youtube.com/playlist?list=PLGC-s5wU_PFRiFxj0oAcjX-irpNnuE8dH">suitable YouTube playlist</a>)</li>

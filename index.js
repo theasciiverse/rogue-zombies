@@ -80,14 +80,15 @@ var DB = {
   "zombie-spawn": 8,
   "rake": 3,
   "crowbar": 3,
-  "swoosh": 1,
+  "swoosh": 3,
   "barricade": 3,
   "wire": 3,
   "fence": 2,
   "bazooka": 1,
   "mine": 1,
   "game-over": 1,
-  "ping": 1
+  "ping": 1,
+  "ow": 1
 };
 var audio = {};
 function init2() {
@@ -617,7 +618,7 @@ function sleep2(ms) {
 var CONNECTION_DISTANCE = 3;
 var Wire = class extends Item {
   static Name = "Barbed wire";
-  static description = "Auto-connects to nearby wires. Has little health.";
+  static description = "Auto-connects to nearby wires (up to 3 blocks away). Has little health.";
   visual = { ch: "*", fg: METAL };
   sound = "wire";
   activate(being) {
@@ -681,7 +682,7 @@ function tryConnection(position, directionIndex, map, Ctor) {
 var COLORS2 = ["", ...FENCE.slice().reverse()];
 var Fence = class extends Wire {
   static Name = "Electric fence";
-  static description = "Auto-connects to nearby fences. Has more health.";
+  static description = "Auto-connects to nearby fences (up to 3 blocks away). Has more health.";
   _hp = COLORS2.length - 1;
   visual = { ch: "*", fg: COLORS2[this._hp] };
   sound = "fence";
@@ -861,11 +862,11 @@ var Player = class extends Being {
       let num = key.code.match(/\d/);
       return num ? this.tryItem(num[0]) : false;
     }
-    if (key.key == "i" && level.isAllowed("shop")) {
+    if (["i", "I"].includes(key.key) && level.isAllowed("shop")) {
       await level.shop();
       return false;
     }
-    if (key.key == "s" && level.isAllowed("start")) {
+    if (["s", "S"].includes(key.key) && level.isAllowed("start")) {
       let result = await start();
       if (result) {
         level.start();
@@ -877,11 +878,6 @@ var Player = class extends Being {
     if (key.key == "?") {
       await level.help();
       return false;
-    }
-    if (key.key == "q") {
-      this._hp = 1;
-      this.damage(this);
-      return true;
     }
     return false;
   }
@@ -938,6 +934,9 @@ var Player = class extends Being {
   damage(source) {
     add(`${source.name.article().capitalize()} hits you!`);
     super.damage(source);
+    if (this._hp > 0) {
+      play("ow");
+    }
     this.level.updateStatus();
   }
   die(source) {
@@ -1001,18 +1000,14 @@ function reset() {
   DOM_MISC["rounds"] = buildRounds();
   DOM_MISC["shop"] = buildShop();
   DOM_MISC["help"] = buildHelp();
-  let nodes = [
-    ...Object.values(DOM_ITEMS),
-    "\n",
-    DOM_MISC["hp"],
-    DOM_MISC["money"],
-    DOM_MISC["score"],
-    DOM_MISC["rounds"],
-    DOM_MISC["start"],
-    DOM_MISC["shop"],
-    DOM_MISC["help"]
-  ];
-  node2.replaceChildren(...nodes);
+  let left = document.createElement("div");
+  left.append(DOM_MISC["hp"], DOM_MISC["money"], DOM_MISC["score"], DOM_MISC["rounds"]);
+  let right = document.createElement("div");
+  right.append(DOM_MISC["start"], DOM_MISC["shop"], DOM_MISC["help"]);
+  let flex = document.createElement("div");
+  flex.className = "flex";
+  flex.append(left, right);
+  node2.replaceChildren(...Object.values(DOM_ITEMS), flex);
 }
 function update(level) {
   const { player } = level;
@@ -1149,6 +1144,7 @@ var HTML2 = `
 	<p>A bit of warning: this is a roguelike game created for the 2024 7DRL challenge. It may contain bugs, surprising UI/UX and possibly even a lutefisk. You can find more details at the <a href="https://github.com/ondras/roguezombies">game's GitHub repository</a>.</p>
 	<p>Recommendations:</p>
 	<ul>
+		<li>this game is played using <strong>keyboard only</strong></li>
 		<li>browser window size of at least 800\xD7600 pixels</li>
 		<li>audio on (game uses sound effects)</li>
 		<li>background music (<a href="https://www.youtube.com/playlist?list=PLGC-s5wU_PFRiFxj0oAcjX-irpNnuE8dH">suitable YouTube playlist</a>)</li>
@@ -1243,7 +1239,7 @@ function bgColor(x, y) {
 }
 
 // src/map.ts
-var Map = class {
+var Map2 = class {
   constructor(width, height, renderer) {
     this.width = width;
     this.height = height;
@@ -1613,6 +1609,10 @@ function findClosestDoor(doors, point) {
 // src/dialogs/gameover.ts
 async function gameOver(level) {
   let dialog = new Dialog("Game over!");
+  let z = document.createElement("div");
+  z.className = "zombie";
+  z.textContent = "\u{1F9DF}";
+  dialog.append(z);
   let p1 = document.createElement("p");
   p1.textContent = level.player.hp > 0 ? ALIVE : DEAD;
   let p2 = document.createElement("p");
@@ -1738,7 +1738,7 @@ var Level = class {
   _score = 0;
   _rounds = 0;
   constructor(renderer) {
-    let map = new Map(tileCount[0], tileCount[1], renderer);
+    let map = new Map2(tileCount[0], tileCount[1], renderer);
     this.map = map;
     let zombies = new Zombies(this);
     this.zombies = zombies;
@@ -1852,7 +1852,8 @@ async function tutorial2() {
 var HTML5 = `
 <p>Good job! No more zombies in sight. Also, by killing the zombie, you earned your first money.</p>
 <p>Of course, fighting zombies by <em>bumping</em> into them would not work for long.
-The best way to combat these undead folks is by using <strong>items</strong>.
+Once you get near a zombie, it can damage you and reduce your health to zero. That would end the game.</p>
+<p>The best way to combat these undead folks is by using <strong>items</strong>.
 When in the game, you can always open the item shop with the <kbd>I</kbd> key.</p>
 <p>It would be wise to try that out now. Press <kbd>esc</kbd> to continue and use the earned money to buy <strong>a rake</strong>.</p>
 `;
@@ -1869,8 +1870,8 @@ async function tutorial3() {
 var HTML6 = `
 <p>Your inventory is displayed below the map. Available items can be used by pressing the corresponding number key.</p>
 <p>As you can see, another zombie has spawned. This might be a good time to use those rakes you just bought.</p>
-<p>A rake is your basic trap item: you place it on the ground and wait for a zombie to step on it.
-When that happens, both the zombie and the rake gets destroyed.</p>
+<p>A rake is your basic trap item: you place it on the ground (on one of your eight neighboring blocks) and wait for a zombie to step on it.
+When that happens, both the zombie and the rake get destroyed.</p>
 <p>Press <kbd>esc</kbd> to continue and get rid of the zombie.</p>
 `;
 
@@ -2088,57 +2089,50 @@ var Renderer = class {
   }
 };
 
-// src/renderer/canvas.ts
-var DPR = devicePixelRatio > 1 ? 2 : 1;
-var Canvas = class extends Renderer {
-  node = document.createElement("canvas");
-  ctx = this.node.getContext("2d");
-  tileSize;
+// src/renderer/dom.ts
+var DOM = class extends Renderer {
+  node = document.createElement("div");
+  nodes = /* @__PURE__ */ new Map();
   constructor() {
     super();
-    this.node.className = "renderer canvas";
+    this.node.className = "renderer dom";
   }
-  configure(tileCount2, tileSize2) {
-    const { node: node3, ctx } = this;
-    node3.width = tileCount2[0] * tileSize2[0] * DPR;
-    node3.height = tileCount2[1] * tileSize2[1] * DPR;
-    ctx.restore();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = `bold ${tileSize2[1]}px input`;
-    ctx.scale(DPR, DPR);
-    this.tileSize = tileSize2;
+  configure() {
   }
   draw(x, y, drawables) {
-    let visuals = drawables.map((d) => d.visual);
-    let visual = resolveVisual(visuals);
-    this.drawVisual(x, y, visual);
+    const { node: node3, nodes } = this;
+    drawables.forEach((d, i) => {
+      let dnode = nodes.get(d);
+      if (!dnode) {
+        dnode = document.createElement("div");
+        node3.append(dnode);
+        nodes.set(d, dnode);
+      }
+      dnode.style.setProperty("--x", String(x));
+      dnode.style.setProperty("--y", String(y));
+      dnode.style.zIndex = String(i + 1);
+      const { visual } = d;
+      if (visual.bg) {
+        dnode.style.backgroundColor = visual.bg;
+      }
+      if (visual.fg) {
+        dnode.style.color = i + 1 == drawables.length ? visual.fg : "transparent";
+      }
+      if (visual.ch) {
+        dnode.textContent = visual.ch;
+      }
+    });
   }
-  drawVisual(x, y, visual) {
-    const { ctx, tileSize: tileSize2 } = this;
-    ctx.fillStyle = visual.bg;
-    ctx.fillRect(x * tileSize2[0], y * tileSize2[1], tileSize2[0], tileSize2[1]);
-    if (visual.ch) {
-      ctx.fillStyle = visual.fg;
-      ctx.fillText(visual.ch, (x + 0.5) * tileSize2[0], (y + 0.5) * tileSize2[1] + 1);
-    }
-  }
-  remove() {
+  remove(drawable) {
+    const { nodes } = this;
+    let dnode = nodes.get(drawable);
+    dnode && dnode.remove();
   }
 };
-function resolveVisual(visuals) {
-  let visual = {
-    bg: "black",
-    fg: "gray",
-    ch: ""
-  };
-  visuals.forEach((v) => Object.assign(visual, v));
-  return visual;
-}
 
 // src/index.ts
 async function run() {
-  let RCtor2 = Canvas;
+  let RCtor2 = DOM;
   let main = document.querySelector("main");
   await init([43 * 2, 30], RCtor2);
   init2();

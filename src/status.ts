@@ -24,15 +24,17 @@ export function reset() {
 	DOM_MISC["shop"] = buildShop();
 	DOM_MISC["help"] = buildHelp();
 
-	let nodes = [
-		...Object.values(DOM_ITEMS),
-		"\n",
-		DOM_MISC["hp"], DOM_MISC["money"],
-		DOM_MISC["score"], DOM_MISC["rounds"],
-		DOM_MISC["start"], DOM_MISC["shop"], DOM_MISC["help"]
-	];
+	let left = document.createElement("div");
+	left.append(DOM_MISC["hp"], DOM_MISC["money"], DOM_MISC["score"], DOM_MISC["rounds"]);
 
-	node.replaceChildren(...nodes);
+	let right = document.createElement("div");
+	right.append(DOM_MISC["start"], DOM_MISC["shop"], DOM_MISC["help"]);
+
+	let flex = document.createElement("div");
+	flex.className = "flex";
+	flex.append(left, right);
+
+	node.replaceChildren(...Object.values(DOM_ITEMS), flex);
 }
 
 export function update(level: Level) {

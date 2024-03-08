@@ -2,14 +2,15 @@ const DB = {
 	"zombie-spawn": 8,
 	"rake": 3,
 	"crowbar": 3,
-	"swoosh": 1,
+	"swoosh": 3,
 	"barricade": 3,
 	"wire": 3,
 	"fence": 2,
 	"bazooka": 1,
 	"mine": 1,
 	"game-over": 1,
-	"ping": 1
+	"ping": 1,
+	"ow": 1
 }
 
 let audio: Partial<Record<keyof typeof DB, HTMLAudioElement[]>> = {};

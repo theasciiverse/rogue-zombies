@@ -16,7 +16,8 @@ export default async function tutorial2() {
 const HTML = `
 <p>Good job! No more zombies in sight. Also, by killing the zombie, you earned your first money.</p>
 <p>Of course, fighting zombies by <em>bumping</em> into them would not work for long.
-The best way to combat these undead folks is by using <strong>items</strong>.
+Once you get near a zombie, it can damage you and reduce your health to zero. That would end the game.</p>
+<p>The best way to combat these undead folks is by using <strong>items</strong>.
 When in the game, you can always open the item shop with the <kbd>I</kbd> key.</p>
 <p>It would be wise to try that out now. Press <kbd>esc</kbd> to continue and use the earned money to buy <strong>a rake</strong>.</p>
 `;

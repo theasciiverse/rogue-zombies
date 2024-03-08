@@ -5,6 +5,11 @@ import Level from "../levels/level.js";
 export default async function gameOver(level: Level) {
 	let dialog = new Dialog("Game over!");
 
+	let z = document.createElement("div");
+	z.className = "zombie";
+	z.textContent = "🧟";
+	dialog.append(z);
+
 	let p1 = document.createElement("p");
 	p1.textContent = (level.player.hp > 0 ? ALIVE : DEAD);
 

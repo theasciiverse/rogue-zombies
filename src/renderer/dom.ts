@@ -29,8 +29,8 @@ export default class DOM extends Renderer {
 
 			const { visual } = d;
 			if (visual.bg) { dnode.style.backgroundColor = visual.bg; }
-			if (visual.fg) { dnode.style.color = visual.fg; }
-//			if (visual.fg) { dnode.style.color = (i+1 == drawables.length ? visual.fg : "transparent"); }
+//			if (visual.fg) { dnode.style.color = visual.fg; }
+			if (visual.fg) { dnode.style.color = (i+1 == drawables.length ? visual.fg : "transparent"); }
 			if (visual.ch) { dnode.textContent = visual.ch; }
 		})
 	}

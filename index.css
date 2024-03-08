@@ -121,6 +121,10 @@ th { text-align: left; }
 tbody td { padding-right: 2ch; }
 td:has(.money) { white-space: nowrap; }
 
+.zombie {
+	text-align: center;
+	font-size: 200px;
+}
 .hp { color: red; }
 .money { color: gold; }
 .money::after { content: "$"; }
@@ -139,6 +143,10 @@ td:has(.money) { white-space: nowrap; }
 #status .count::before, dialog .count::after {
 	content: "×";
 	opacity: 0.5;
+}
+#status .flex {
+	display: flex;
+	justify-content: space-between;
 }
 
 #log {

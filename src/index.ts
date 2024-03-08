@@ -14,7 +14,7 @@ import Ctor from "./levels/tutorial.js"
 
 
 async function run() {
-	let RCtor = Canvas;
+	let RCtor = DOM;
 	let main = document.querySelector("main")!;
 
 	await metrics.init([43*2, 30], RCtor);
