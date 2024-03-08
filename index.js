@@ -928,9 +928,12 @@ var Player = class extends Being {
     }
     const { map, position } = this;
     clear();
-    this.setItem(it.id, amount - 1);
     let item = new it.ctor(map);
-    return item.use(position, direction);
+    let used = item.use(position, direction);
+    if (used) {
+      this.setItem(it.id, amount - 1);
+    }
+    return used;
   }
   damage(source) {
     add(`${source.name.article().capitalize()} hits you!`);

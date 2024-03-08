@@ -1,7 +1,7 @@
 import Level from "./level.js";
 
 
-const TURNS = 100; // FIXME vyladit pocet
+const TURNS = 300; // FIXME vyladit pocet
 
 export default class Hope extends Level {
 	static Name = "Hope";
