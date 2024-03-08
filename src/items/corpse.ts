@@ -10,7 +10,7 @@ export default class Corpse extends Item {
 	constructor(map: Map, being: Being) {
 		super(map);
 
-		this.visual.fg = being.visual.fg;
+		this.visual.fg = being.visual.fg || "";
 		this._position = being.position
 		this._name = `${being.name} corpse`;
 	}

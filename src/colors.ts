@@ -1,8 +1,10 @@
 export const WOOD = ["#c90", "#850", "#300"];
-export const WATER = "darkblue";
+export const WATER = "#006";
 export const WAVE = ["#05f", "#28f", "#6cf"];
 export const TREE = [WOOD[0], WOOD[1], "#181"];
-export const FENCE = ["#88f", "#33a", "#008"];
+export const FENCE = ["#c0c", "#a0a", "#909"];
 export const METAL = "gray";
 export const WINDOW = "dodgerblue";
 export const ZOMBIE = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
+export const DOT = "#222";
+export const ROAD = "saddlebrown";

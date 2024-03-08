@@ -31,7 +31,7 @@ export default abstract class Item extends Entity {
 
 		if (item) {
 			if (item.blocksMovement) {
-				log.add(`Cannot use ${this.name}: ${being.name.article()} is standing there!`);
+				log.add(`Cannot use ${this.name}: ${item.name.article()} is standing there!`);
 				return false;
 			} else if (item instanceof Corpse) {
 				map.removeItem(item);

@@ -16,6 +16,8 @@ export function create(map: Map) {
 	center[0] += randomInt(-X_RANGE, X_RANGE);
 	center[1] += randomInt(-Y_RANGE, Y_RANGE);
 
+	let doors: number[][] = [];
+
 	for (let i=-W;i<=W;i++) {
 		for (let j=-H;j<=H;j++) {
 			let x = center[0] + i;
@@ -24,7 +26,10 @@ export function create(map: Map) {
 			let horizontalEdge = (j == -H || j == H);
 
 			let empty = false;
-			if (i==0 || j==0) { empty = true; } // door
+			if (i==0 || j==0) { // door
+				empty = true;
+				doors.push([x, y]);
+			}
 			if (!verticalEdge && !horizontalEdge) { empty = true; } // skip mid
 
 			if (empty) {
@@ -37,7 +42,7 @@ export function create(map: Map) {
 		}
 	}
 
-	return center;
+	return {center, doors};
 }
 
 function tryItem(map: Map, x: number, y: number, vertical: boolean, horizontal: boolean) {

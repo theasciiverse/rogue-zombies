@@ -3,7 +3,7 @@ import { Visual } from "./renderer/renderer.js";
 
 
 export default abstract class Entity {
-	protected _position: number[];
+	protected _position!: number[];
 	protected _hp = 1;
 
 	constructor(protected map: Map) {}

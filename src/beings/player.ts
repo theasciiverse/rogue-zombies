@@ -55,7 +55,7 @@ export default class Player extends Being {
 		if (isIdle(key)) { return true; }
 
 		if (key.code in MOVEMENT) {
-			let diff = MOVEMENT[key.code] as [number, number];
+			let diff = MOVEMENT[key.code as keyof typeof MOVEMENT] as [number, number];
 			return this.moveBy(...diff);
 		}
 
@@ -158,7 +158,7 @@ export default class Player extends Being {
 	}
 }
 
-async function waitForDirection(prefix: string): Promise<[number, number] | null> {
+async function waitForDirection(prefix: string): Promise<number[] | null> {
 	log.add(`${prefix}: pick a direction, ESC to abort...`);
 	while (true) {
 		let key = await keyboard.readKey();
@@ -166,7 +166,7 @@ async function waitForDirection(prefix: string): Promise<[number, number] | null
 			log.add("aborted.");
 			return null;
 		} else if (key.code in MOVEMENT) {
-			return MOVEMENT[key.code];
+			return MOVEMENT[key.code as keyof typeof MOVEMENT];
 		}
 	}
 }

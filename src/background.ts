@@ -1,4 +1,5 @@
 import { Drawable, Visual } from "./renderer/renderer.js";
+import * as colors from "./colors.js";
 
 let seed = -Math.random()*100;
 
@@ -12,7 +13,7 @@ export default class Background {
 			let col: Drawable[] = [];
 			data.push(col);
 			for (let y = 0; y < height; y++) {
-				let drawable = {position: [x, y], visual: {ch: ".", bg: bgColor(x, y), fg: "#222"}};
+				let drawable = {position: [x, y], visual: {ch: ".", bg: bgColor(x, y), fg: colors.DOT}};
 				col.push(drawable);
 			}
 		}

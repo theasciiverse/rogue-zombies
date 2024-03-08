@@ -22,7 +22,7 @@ Array.prototype.random = function() {
 
 String.prototype.capitalize = function() {
 	const { length } = this;
-	if (!length) { return this; }
+	if (!length) { return this.valueOf(); }
 	return this.substring(0, 1).toUpperCase() + this.substring(1);
 }
 

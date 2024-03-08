@@ -12,13 +12,13 @@ export function create(map: Map, cornerIndex: number) {
 }
 
 function createAtPoint(map: Map, center: number[]) {
-	const W = 7;
+	const W = 8;
 	const H = 4;
 	for (let i=-W;i<=W;i++) {
 		for (let j=-H;j<=H;j++) {
 			let dx = i/W;
 			let dy = j/H;
-			let dist = Math.sqrt(dx*dx + dy*dy);
+			let dist = Math.sqrt(dx*dx + dy*dy) ** 0.5;
 			if (Math.random() < dist) { continue; }
 
 			let x = center[0] + i;

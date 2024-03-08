@@ -74,6 +74,11 @@ export default class Map {
 		this.redraw(item.position);
 	}
 
+	setBackground(x: number, y: number, visual: Partial<Visual>) {
+		this.bg.set(x, y, visual);
+		this.redraw([x, y]);
+	}
+
 	setFX(x: number, y: number, visual: Partial<Visual> | null) {
 		const { fx } = this;
 		let key = `${x},${y}`;

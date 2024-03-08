@@ -9,7 +9,7 @@ Array.prototype.random = function() {
 String.prototype.capitalize = function() {
   const { length } = this;
   if (!length) {
-    return this;
+    return this.valueOf();
   }
   return this.substring(0, 1).toUpperCase() + this.substring(1);
 };
@@ -102,7 +102,8 @@ function init2() {
   });
 }
 function play(what) {
-  audio[what].random().play();
+  let a = audio[what];
+  a && a.random().play();
 }
 
 // src/entity.ts
@@ -131,24 +132,11 @@ var Entity = class {
 };
 
 // src/keyboard.ts
-function matchFilter(event, filter) {
-  if (!filter.length) {
-    return true;
-  }
-  return filter.some((f) => {
-    for (let p in f) {
-      return event[p] == f[p];
-    }
-  });
-}
-async function readKey(allowed = []) {
+async function readKey() {
   let ac = new AbortController();
   let { signal } = ac;
   return new Promise((resolve) => {
     function onKeyDown(e) {
-      if (!matchFilter(e, allowed)) {
-        return;
-      }
       ac.abort();
       resolve(e);
     }
@@ -243,7 +231,7 @@ var Item = class extends Entity {
     }
     if (item) {
       if (item.blocksMovement) {
-        add(`Cannot use ${this.name}: ${being.name.article()} is standing there!`);
+        add(`Cannot use ${this.name}: ${item.name.article()} is standing there!`);
         return false;
       } else if (item instanceof Corpse) {
         map.removeItem(item);
@@ -263,7 +251,7 @@ var Corpse = class extends Item {
   _name;
   constructor(map, being) {
     super(map);
-    this.visual.fg = being.visual.fg;
+    this.visual.fg = being.visual.fg || "";
     this._position = being.position;
     this._name = `${being.name} corpse`;
   }
@@ -287,13 +275,15 @@ var Being = class extends Entity {
 
 // src/colors.ts
 var WOOD = ["#c90", "#850", "#300"];
-var WATER = "darkblue";
+var WATER = "#006";
 var WAVE = ["#05f", "#28f", "#6cf"];
 var TREE = [WOOD[0], WOOD[1], "#181"];
-var FENCE = ["#88f", "#33a", "#008"];
+var FENCE = ["#c0c", "#a0a", "#909"];
 var METAL = "gray";
 var WINDOW = "dodgerblue";
 var ZOMBIE = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
+var DOT = "#222";
+var ROAD = "saddlebrown";
 
 // src/items/trap.ts
 var Trap = class extends Item {
@@ -387,9 +377,10 @@ var dirs_default = [
   [-1, 0],
   [-1, -1]
 ];
+var CHARS = ["|", "/", "-", "\\", "|", "/", "-", "\\"];
 
 // src/beings/zombie.ts
-var CHARS = ["z", "Z"];
+var CHARS2 = ["z", "Z"];
 var Zombie = class extends Being {
   constructor(map, zombies) {
     super(map);
@@ -400,7 +391,7 @@ var Zombie = class extends Being {
       this._name = this.visual.ch == "z" ? "zombie" : "large zombie";
     }
   }
-  visual = { ch: CHARS.random(), fg: ZOMBIE.random() };
+  visual = { ch: CHARS2.random(), fg: ZOMBIE.random() };
   _name;
   get name() {
     return this._name;
@@ -609,15 +600,12 @@ function getTarget(map, position, direction) {
     }
     distance++;
     let being = map.getBeing(x, y);
-    let item = map.getItem(x, y);
-    let target;
     if (being) {
-      target = being;
-    } else if (item && item.blocksBazooka) {
-      target = item;
+      return { target: being, distance };
     }
-    if (target) {
-      return { target, distance };
+    let item = map.getItem(x, y);
+    if (item && item.blocksBazooka) {
+      return { target: item, distance };
     }
   }
 }
@@ -630,7 +618,7 @@ var CONNECTION_DISTANCE = 3;
 var Wire = class extends Item {
   static Name = "Barbed wire";
   static description = "Auto-connects to nearby wires. Has little health.";
-  visual = { ch: "#", fg: METAL };
+  visual = { ch: "*", fg: METAL };
   sound = "wire";
   activate(being) {
     play(this.sound);
@@ -648,15 +636,18 @@ var Wire = class extends Item {
     this._position = [tx, ty];
     map.addItem(this);
     let Ctor = this.constructor;
-    dirs_default.forEach((dir) => {
-      tryConnection([tx, ty], dir, map, Ctor);
+    dirs_default.forEach((dir, i) => {
+      tryConnection([tx, ty], i, map, Ctor);
     });
     add(`You build ${this.name.article()} segment.`);
+    return true;
   }
 };
-function tryConnection(position, direction, map, Ctor) {
+function tryConnection(position, directionIndex, map, Ctor) {
   let amount = 0;
-  for (let i = 1; i < CONNECTION_DISTANCE; i++) {
+  let direction = dirs_default[directionIndex];
+  let ch = CHARS[directionIndex];
+  for (let i = 1; i <= CONNECTION_DISTANCE; i++) {
     let x = position[0] + i * direction[0];
     let y = position[1] + i * direction[1];
     let being = map.getBeing(x, y);
@@ -680,6 +671,7 @@ function tryConnection(position, direction, map, Ctor) {
     let corpse = map.getItem(x, y);
     corpse && map.removeItem(corpse);
     let item = new Ctor(map);
+    item.visual.ch = ch;
     item.position = [x, y];
     map.addItem(item);
   }
@@ -691,7 +683,7 @@ var Fence = class extends Wire {
   static Name = "Electric fence";
   static description = "Auto-connects to nearby fences. Has more health.";
   _hp = COLORS2.length - 1;
-  visual = { ch: "!", fg: COLORS2[this._hp] };
+  visual = { ch: "*", fg: COLORS2[this._hp] };
   sound = "fence";
   damage(source) {
     super.damage(source);
@@ -1011,9 +1003,9 @@ function reset() {
     "\n",
     DOM_MISC["hp"],
     DOM_MISC["money"],
-    DOM_MISC["start"],
     DOM_MISC["score"],
     DOM_MISC["rounds"],
+    DOM_MISC["start"],
     DOM_MISC["shop"],
     DOM_MISC["help"]
   ];
@@ -1069,9 +1061,7 @@ function buildScore() {
   return node3;
 }
 function updateScore(level) {
-  let node3 = DOM_MISC["score"];
-  node3.hidden = !level.isAllowed("score");
-  let span = node3.querySelector(".score");
+  let span = DOM_MISC["score"].querySelector(".score");
   let score = level.score;
   span.textContent = String(score);
   animateIfChanged(span, score);
@@ -1082,14 +1072,12 @@ function buildRounds() {
   return node3;
 }
 function updateRounds(level) {
-  let node3 = DOM_MISC["rounds"];
-  node3.hidden = !level.isAllowed("score");
-  let span = node3.querySelector(".rounds");
+  let span = DOM_MISC["rounds"].querySelector(".rounds");
   span.textContent = String(level.rounds);
 }
 function buildStart() {
   let node3 = document.createElement("span");
-  node3.append("  ", buildKey("S", "tart the invasion"));
+  node3.append("  ", buildKey("S", "tart"));
   return node3;
 }
 function updateStart(level) {
@@ -1341,7 +1329,7 @@ var Background = class {
       let col = [];
       data.push(col);
       for (let y = 0; y < height; y++) {
-        let drawable = { position: [x, y], visual: { ch: ".", bg: bgColor(x, y), fg: "#222" } };
+        let drawable = { position: [x, y], visual: { ch: ".", bg: bgColor(x, y), fg: DOT } };
         col.push(drawable);
       }
     }
@@ -1426,6 +1414,10 @@ var Map2 = class {
     this.items = this.items.filter((i) => i != item);
     this.renderer.remove(item);
     this.redraw(item.position);
+  }
+  setBackground(x, y, visual) {
+    this.bg.set(x, y, visual);
+    this.redraw([x, y]);
   }
   setFX(x, y, visual) {
     const { fx } = this;
@@ -1580,13 +1572,13 @@ function create2(map, cornerIndex) {
   createAtPoint2(map, midPoint);
 }
 function createAtPoint2(map, center) {
-  const W = 7;
+  const W = 8;
   const H = 4;
   for (let i = -W; i <= W; i++) {
     for (let j = -H; j <= H; j++) {
       let dx = i / W;
       let dy = j / H;
-      let dist = Math.sqrt(dx * dx + dy * dy);
+      let dist = Math.sqrt(dx * dx + dy * dy) ** 0.5;
       if (Math.random() < dist) {
         continue;
       }
@@ -1643,6 +1635,7 @@ function create3(map) {
   let center = [Math.round(map.width / 2), Math.round(map.height / 2)];
   center[0] += randomInt(-X_RANGE, X_RANGE);
   center[1] += randomInt(-Y_RANGE, Y_RANGE);
+  let doors = [];
   for (let i = -W; i <= W; i++) {
     for (let j = -H; j <= H; j++) {
       let x = center[0] + i;
@@ -1652,6 +1645,7 @@ function create3(map) {
       let empty = false;
       if (i == 0 || j == 0) {
         empty = true;
+        doors.push([x, y]);
       }
       if (!verticalEdge && !horizontalEdge) {
         empty = true;
@@ -1664,7 +1658,7 @@ function create3(map) {
       tryItem3(map, x, y, verticalEdge, horizontalEdge);
     }
   }
-  return center;
+  return { center, doors };
 }
 function tryItem3(map, x, y, vertical, horizontal) {
   if (!map.isPositionValid(x, y)) {
@@ -1681,6 +1675,49 @@ function tryItem3(map, x, y, vertical, horizontal) {
     i = new Ctor(map, ch, x, y);
   }
   map.addItem(i);
+}
+
+// src/terrain/road.ts
+var END_JITTER = 3;
+function create4(map, doors, riverIndex) {
+  let nonRiverCorner = map.getCorners()[(riverIndex + 2) % 4];
+  let w2 = map.width / 2;
+  let h2 = map.height / 2;
+  let borderPoint1 = [w2, nonRiverCorner[1]];
+  let borderPoint2 = [nonRiverCorner[0], h2];
+  let borderPoints = [borderPoint1, borderPoint2];
+  let roadCount = randomInt(1, 2);
+  while (roadCount-- > 0) {
+    let borderPoint = borderPoints.random();
+    borderPoints = borderPoints.filter((p) => p != borderPoint);
+    let door = findClosestDoor(doors, borderPoint);
+    createSegment(map, door, borderPoint);
+  }
+}
+function createSegment(map, start2, end) {
+  let [x1, y1] = start2;
+  let [x2, y2] = end;
+  x2 += randomInt(-END_JITTER, END_JITTER);
+  y2 += randomInt(-END_JITTER, END_JITTER);
+  let length = start2.distance(end) + END_JITTER;
+  let vec = [x2 - x1, y2 - y1].normalize();
+  let normal = [vec[1], -vec[0]];
+  let thickness = randomInt(1, 3);
+  for (let i = 0; i <= length; i++) {
+    for (let j = 0; j < thickness; j++) {
+      let dist = j - thickness / 2;
+      let x = Math.round(x1 + i * vec[0] + dist * normal[0]);
+      let y = Math.round(y1 + i * vec[1] + dist * normal[1]);
+      if (!map.isPositionValid(x, y)) {
+        continue;
+      }
+      map.setBackground(x, y, { fg: ROAD });
+    }
+  }
+}
+function findClosestDoor(doors, point) {
+  doors.sort((a, b) => a.distance(point) - b.distance(point));
+  return doors[0];
 }
 
 // src/dialogs/gameover.ts
@@ -1829,8 +1866,6 @@ var Level = class {
         return true;
       case "start":
         return !this._started;
-      case "score":
-        return this._started;
       case "spawn":
         return this._started;
     }
@@ -1884,34 +1919,26 @@ var Level = class {
     const { map, player } = this;
     let riverIndex = randomInt(0, 3);
     create(map, riverIndex);
-    let forestIndex = (riverIndex + 2) % 4;
-    create2(map, forestIndex);
-    let center = create3(map);
-    player.position = center;
+    let otherIndices = [0, 1, 2, 3].filter((i) => i != riverIndex);
+    let forestCount = randomInt(1, 2);
+    while (forestCount-- > 0) {
+      let forestIndex = otherIndices.random();
+      otherIndices = otherIndices.filter((i) => i != forestIndex);
+      create2(map, forestIndex);
+    }
+    let h = create3(map);
+    create4(map, h.doors, riverIndex);
+    player.position = h.center;
     map.addBeing(player);
   }
 };
 
-// src/levels/sandbox.ts
-var Sandbox = class extends Level {
-  static Name = "Sandbox";
-  static description = "unlimited resources, unlimited carnage";
-  constructor(renderer) {
-    super(renderer);
-    const { player } = this;
-    player.setItem("rake", Infinity);
-    player.setItem("barricade", Infinity);
-    player.setItem("trap", Infinity);
-    player.setItem("mine", Infinity);
-    player.setItem("bazooka", Infinity);
-    player.setItem("wire", Infinity);
-    player.setItem("fence", Infinity);
-  }
-  isAllowed(feature) {
-    if (feature == "shop") {
-      return false;
-    }
-    return super.isAllowed(feature);
+// src/levels/regular.ts
+var Regular = class extends Level {
+  static Name = "Regular";
+  static description = "Survive for as long as possible. Limited starting resources, unlimited zombies.";
+  get initialMoney() {
+    return 10;
   }
 };
 
@@ -1926,7 +1953,7 @@ async function run() {
     clear();
     let renderer = new RCtor2();
     main.replaceChildren(renderer.node, node2, node);
-    await new Sandbox(renderer).play();
+    await new Regular(renderer).play();
     main.replaceChildren();
   }
 }

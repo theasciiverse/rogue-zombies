@@ -6,7 +6,7 @@ const DPR = (devicePixelRatio > 1 ? 2 : 1);
 export default class Canvas extends Renderer {
 	readonly node = document.createElement("canvas");
 	protected ctx = this.node.getContext("2d")!;
-	protected tileSize: number[];
+	protected tileSize!: number[];
 
 	constructor() {
 		super();

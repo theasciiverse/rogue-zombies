@@ -28,6 +28,7 @@ AKA the development diary
 - Day #3 (Tuesday 5. 3.): rooibos, finalizing items, procrastinating with sfx, more ui, main gameplay loop
 - Day #4 (Wednesday 6. 3.): earl grey, kopr, more dialogs and levels, tutorial
 - Day #5 (Thursday 7. 3.): gunpowder, terrain, docs
+- Day #6 (Friday 8. 3.): raspberry tea, terrain, polish, hope level, playtesting
 
 
 ## Legacy

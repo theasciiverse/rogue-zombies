@@ -9,7 +9,7 @@ interface Key {
 
 export default class Dialog {
 	protected dialog = document.createElement("dialog");
-	protected resolve: (value: string | null) => void;
+	protected resolve!: (value: string | null) => void;
 	protected keys: Key[] = [];
 
 	constructor(title: string) {

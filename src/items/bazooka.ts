@@ -1,6 +1,5 @@
 import Item from "./item.js";
 import Map from "../map.js";
-import Entity from "../entity.js";
 import * as log from "../log.js";
 import { explode } from "../explosion.js";
 import * as sfx from "../sfx.js";
@@ -57,16 +56,12 @@ function getTarget(map: Map, position: number[], direction: number[]) {
 		if (!map.isPositionValid(x, y)) { return {target:null, distance}; }
 
 		distance++;
-		let being = map.getBeing(x, y);
-		let item = map.getItem(x, y);
-		let target: Entity;
-		if (being) {
-			target = being;
-		} else if (item && item.blocksBazooka) {
-			target = item;
-		}
 
-		if (target) { return {target, distance}; }
+		let being = map.getBeing(x, y);
+		if (being) { return {target:being, distance}; }
+
+		let item = map.getItem(x, y);
+		if (item && item.blocksBazooka) { return {target:item, distance}; }
 	}
 }
 

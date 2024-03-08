@@ -27,8 +27,9 @@ export function reset() {
 	let nodes = [
 		...Object.values(DOM_ITEMS),
 		"\n",
-		DOM_MISC["hp"], DOM_MISC["money"], DOM_MISC["start"],
-		DOM_MISC["score"], DOM_MISC["rounds"], DOM_MISC["shop"], DOM_MISC["help"]
+		DOM_MISC["hp"], DOM_MISC["money"],
+		DOM_MISC["score"], DOM_MISC["rounds"],
+		DOM_MISC["start"], DOM_MISC["shop"], DOM_MISC["help"]
 	];
 
 	node.replaceChildren(...nodes);
@@ -95,10 +96,7 @@ function buildScore() {
 }
 
 function updateScore(level: Level) {
-	let node = DOM_MISC["score"];
-	node.hidden = !level.isAllowed("score");
-
-	let span = node.querySelector(".score")!;
+	let span = DOM_MISC["score"].querySelector(".score")!;
 	let score = level.score;
 	span.textContent = String(score);
 	animateIfChanged(span, score);
@@ -111,16 +109,13 @@ function buildRounds() {
 }
 
 function updateRounds(level: Level) {
-	let node = DOM_MISC["rounds"];
-	node.hidden = !level.isAllowed("score");
-
-	let span = node.querySelector(".rounds")!;
+	let span = DOM_MISC["rounds"].querySelector(".rounds")!;
 	span.textContent = String(level.rounds);
 }
 
 function buildStart() {
 	let node = document.createElement("span");
-	node.append("  ", buildKey("S", "tart the invasion"));
+	node.append("  ", buildKey("S", "tart"));
 	return node;
 }
 

@@ -12,7 +12,7 @@ const DB = {
 	"ping": 1
 }
 
-let audio: Record<keyof typeof DB, HTMLAudioElement[]> = {};
+let audio: Partial<Record<keyof typeof DB, HTMLAudioElement[]>> = {};
 
 export function init() {
 	Object.entries(DB).forEach(([key, count]) => {
@@ -24,10 +24,11 @@ export function init() {
 			list.push(a);
 		}
 
-		audio[key] = list;
+		audio[key as keyof typeof audio] = list;
 	});
 }
 
 export function play(what: keyof typeof DB) {
-	audio[what].random().play();
+	let a = audio[what];
+	a && a.random().play();
 }

@@ -8,6 +8,7 @@ import * as metrics from "../metrics.js";
 import * as river from "../terrain/river.js";
 import * as forest from "../terrain/forest.js";
 import * as house from "../terrain/house.js";
+import * as road from "../terrain/road.js";
 import gameOver from "../dialogs/gameover.js";
 import help from "../dialogs/help.js";
 import shop from "../dialogs/shop.js";
@@ -48,7 +49,6 @@ export default class Level {
 		switch (feature) {
 			case "shop": return true;
 			case "start": return !this._started;
-			case "score": return this._started;
 			case "spawn": return this._started;
 		}
 	}
@@ -98,11 +98,18 @@ export default class Level {
 		let riverIndex = randomInt(0, 3);
 		river.create(map, riverIndex);
 
-		let forestIndex = (riverIndex + 2) % 4;
-		forest.create(map, forestIndex);
+		let otherIndices = [0, 1, 2, 3].filter(i => i != riverIndex);
+		let forestCount = randomInt(1, 2);
+		while (forestCount --> 0) {
+			let forestIndex = otherIndices.random();
+			otherIndices = otherIndices.filter(i => i != forestIndex);
+			forest.create(map, forestIndex);
+		}
 
-		let center = house.create(map);
-		player.position = center;
+		let h = house.create(map);
+		road.create(map, h.doors, riverIndex);
+
+		player.position = h.center;
 		map.addBeing(player);
 	}
 }

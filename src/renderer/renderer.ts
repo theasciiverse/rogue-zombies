@@ -11,7 +11,7 @@ export interface Visual {
 
 
 export default abstract class Renderer {
-	readonly node: HTMLElement;
+	readonly node!: HTMLElement;
 
 	static computeTileSize(tileCount: number[], area: number[], aspectRatioRange: number[]) {
 		let w = Math.floor(area[0]/tileCount[0]);
