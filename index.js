@@ -150,7 +150,7 @@ var shown = [];
 var pending = [];
 function add(str) {
   let span = document.createElement("span");
-  span.textContent = str + " ";
+  span.innerHTML = str + " ";
   let length = str.length + 1;
   pending.push({ node: span, length });
   showPending();
@@ -947,7 +947,7 @@ var Player = class extends Being {
   }
 };
 async function waitForDirection(prefix) {
-  add(`${prefix}: pick a direction, ESC to abort...`);
+  add(`${prefix}: pick a direction, <kbd>esc</kbd> to abort...`);
   while (true) {
     let key = await readKey();
     if (key.key == "Escape") {
@@ -1949,7 +1949,8 @@ var Tutorial = class extends Level {
   }
   async shop() {
     const { player } = this;
-    await shop(player, { only: "rake" });
+    let shopOptions = this.phase == "buying" ? { only: "rake" } : void 0;
+    await shop(player, shopOptions);
     if (player.getItem("rake") > 0 && this.phase == "buying") {
       await this.changePhase("using");
     }
@@ -2027,7 +2028,7 @@ var Hope = class extends Level {
 // src/levels/sandbox.ts
 var Sandbox = class extends Level {
   static Name = "Sandbox";
-  static description = "unlimited resources, unlimited carnage";
+  static description = "Unlimited resources, unlimited carnage";
   constructor(renderer) {
     super(renderer);
     const { player } = this;

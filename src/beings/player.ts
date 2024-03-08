@@ -162,7 +162,7 @@ export default class Player extends Being {
 }
 
 async function waitForDirection(prefix: string): Promise<number[] | null> {
-	log.add(`${prefix}: pick a direction, ESC to abort...`);
+	log.add(`${prefix}: pick a direction, <kbd>esc</kbd> to abort...`);
 	while (true) {
 		let key = await keyboard.readKey();
 		if (key.key == "Escape") {

@@ -15,7 +15,7 @@ let pending: HistoryItem[] = [];
 
 export function add(str: string) {
 	let span = document.createElement("span");
-	span.textContent = str + " ";
+	span.innerHTML = str + " ";
 	let length = str.length+1;
 
 	pending.push({node: span, length});

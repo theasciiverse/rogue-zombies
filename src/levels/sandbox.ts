@@ -4,7 +4,7 @@ import Renderer from "../renderer/renderer.js";
 
 export default class Sandbox extends Level {
 	static Name = "Sandbox";
-	static description = "unlimited resources, unlimited carnage";
+	static description = "Unlimited resources, unlimited carnage";
 
 	constructor(renderer: Renderer) {
 		super(renderer);

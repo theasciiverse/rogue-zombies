@@ -72,7 +72,9 @@ export default class Tutorial extends Level {
 
 	async shop() {
 		const { player } = this;
-		await shop(player, {only:"rake"});
+
+		let shopOptions = (this.phase == "buying" ? {only:"rake"} : undefined);
+		await shop(player, shopOptions);
 
 		if (player.getItem("rake") > 0 && this.phase == "buying") {
 			await this.changePhase("using");
