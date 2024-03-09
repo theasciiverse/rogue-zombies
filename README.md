@@ -5,6 +5,8 @@
 - [Credits](CREDITS.md)
 - [MIT License](LICENSE.md)
 
+![](screenshot.png)
+
 
 ## The Plan
 
