@@ -65,6 +65,7 @@ dd { margin-left: 4ch; }
 	position: relative;
 	font-weight: bold;
 	overflow: hidden;
+	user-select: none;
 }
 
 .renderer.dom div {

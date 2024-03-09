@@ -530,6 +530,9 @@ async function explode(map, center, radius, source) {
     let expCenter = z.position.distance(center) == 0 ? source.position : center;
     let dx = z.position[0] - expCenter[0];
     let dy = z.position[1] - expCenter[1];
+    if (dx == 0 && dy == 0) {
+      return;
+    }
     let vec = [dx, dy].normalize();
     let pos = [z.position[0] + vec[0] * DIST, z.position[1] + vec[1] * DIST];
     z.position = [Math.round(pos[0]), Math.round(pos[1])];
