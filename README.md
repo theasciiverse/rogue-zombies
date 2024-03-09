@@ -32,4 +32,4 @@ AKA the development diary
 
 ## Legacy
 
-This game is standing on the shoulders of giants! In particular, the general idea comes from a same-named game I created back in 2011 (and is still available in the slowly-becoming-obsolete `gh-pages` branch). The whole source code has been thrown away for the purpose of the 7DRL challenge, but the core gameplay loop is the same.
+This game is standing on the shoulders of giants! In particular, the general idea comes from a same-named game I created back in 2011 (and is still available in the slowly-becoming-obsolete `legacy` branch). The whole source code has been thrown away for the purpose of the 7DRL challenge, but the core gameplay loop is the same.
