@@ -5,19 +5,18 @@ import * as status from "./status.js";
 import * as log from "./log.js";
 import welcome from "./dialogs/welcome.js";
 import pickLevel from "./dialogs/levels.js";
-
-import Combo from "./renderer/combo.js";
-import Canvas from "./renderer/canvas.js";
 import DOM from "./renderer/dom.js";
 
-import Ctor from "./levels/tutorial.js"
+// import Combo from "./renderer/combo.js";
+// import Canvas from "./renderer/canvas.js";
+// import Ctor from "./levels/tutorial.js"
 
 
 async function run() {
 	let RCtor = DOM;
 	let main = document.querySelector("main")!;
 
-	await metrics.init([43*2, 30], RCtor);
+	await metrics.init([96, 32], RCtor);
 	sfx.init();
 
 	await welcome();

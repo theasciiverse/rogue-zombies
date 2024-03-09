@@ -3,7 +3,7 @@ const DB = {
 	"rake": 3,
 	"crowbar": 3,
 	"swoosh": 3,
-	"barricade": 3,
+	"barrier": 3,
 	"wire": 3,
 	"fence": 2,
 	"bazooka": 1,

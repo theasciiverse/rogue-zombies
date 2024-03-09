@@ -81,7 +81,7 @@ var DB = {
   "rake": 3,
   "crowbar": 3,
   "swoosh": 3,
-  "barricade": 3,
+  "barrier": 3,
   "wire": 3,
   "fence": 2,
   "bazooka": 1,
@@ -286,6 +286,7 @@ var WINDOW = "dodgerblue";
 var ZOMBIE = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
 var DOT = "#222";
 var ROAD = "saddlebrown";
+var SHOCK = FENCE[0];
 
 // src/items/trap.ts
 var Trap = class extends Item {
@@ -312,10 +313,10 @@ var Trap = class extends Item {
   }
 };
 
-// src/items/barricade.ts
+// src/items/barrier.ts
 var COLORS = ["", ...WOOD.slice().reverse()];
-var Barricade = class extends Item {
-  static Name = "Wooden barricade";
+var Barrier = class extends Item {
+  static Name = "Wooden barrier";
   static description = "Can hold them for some time.";
   _hp = COLORS.length - 1;
   visual = { ch: "#", fg: COLORS[COLORS.length - 1] };
@@ -323,7 +324,7 @@ var Barricade = class extends Item {
     return true;
   }
   damage(source) {
-    play("barricade");
+    play("barrier");
     super.damage(source);
     if (this._hp > 0) {
       this.visual.fg = COLORS[this._hp];
@@ -339,7 +340,7 @@ var Barricade = class extends Item {
     let ty = position[1] + direction[1];
     this._position = [tx, ty];
     this.map.addItem(this);
-    add("You build a barricade.");
+    add("You build a barrier.");
     return true;
   }
 };
@@ -712,14 +713,64 @@ var Fence = class extends Wire {
   }
 };
 
+// src/items/shock.ts
+var Shock = class extends Item {
+  visual = {};
+  static Name = "Electric shock";
+  static description = "Electrocutes a nearby zombie, jumps to neighboring zombies.";
+  async use(position, direction) {
+    const { map } = this;
+    let tx = position[0] + direction[0];
+    let ty = position[1] + direction[1];
+    let being = map.getBeing(tx, ty);
+    if (!(being instanceof Zombie)) {
+      add(`Cannot use ${this.name}: there is no zombie in that direction!`);
+      return false;
+    }
+    await useAtBeing(map, being, this);
+    return true;
+  }
+};
+async function useAtBeing(map, being, source) {
+  play("fence");
+  add("You electrocute a zombie...");
+  let processed = [];
+  let queue = [being];
+  while (queue.length > 0) {
+    let being2 = queue.shift();
+    const { visual, position } = being2;
+    visual.fg = SHOCK;
+    map.changed(being2);
+    await sleep3(50);
+    being2.damage(source);
+    processed.push(being2);
+    dirs_default.forEach((dir) => {
+      let being3 = map.getBeing(position[0] + dir[0], position[1] + dir[1]);
+      if (!being3) {
+        return;
+      }
+      if (!(being3 instanceof Zombie)) {
+        return;
+      }
+      if (queue.includes(being3) || processed.includes(being3)) {
+        return;
+      }
+      queue.push(being3);
+    });
+  }
+}
+function sleep3(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // src/items/db.ts
 var ITEMS = [{
-  id: "barricade",
-  short: "Barricade",
+  id: "barrier",
+  short: "Barrier",
   key: "1",
   price: 1,
   amount: 5,
-  ctor: Barricade
+  ctor: Barrier
 }, {
   id: "rake",
   key: "2",
@@ -731,31 +782,38 @@ var ITEMS = [{
   short: "Trap",
   key: "3",
   price: 2,
-  amount: 2,
+  amount: 3,
   ctor: Trap
 }, {
   id: "mine",
   key: "4",
   price: 3,
-  amount: 1,
+  amount: 3,
   ctor: Mine
 }, {
-  id: "bazooka",
+  id: "shock",
+  short: "Shock",
   key: "5",
+  price: 4,
+  amount: 2,
+  ctor: Shock
+}, {
+  id: "bazooka",
+  key: "6",
   price: 5,
   amount: 1,
   ctor: Bazooka
 }, {
   id: "wire",
   short: "Wire",
-  key: "6",
-  price: 3,
+  key: "7",
+  price: 2,
   amount: 2,
   ctor: Wire
 }, {
   id: "fence",
   short: "Fence",
-  key: "7",
+  key: "8",
   price: 3,
   amount: 2,
   ctor: Fence
@@ -1506,7 +1564,7 @@ function tryItem2(map, x, y) {
 }
 
 // src/items/house.ts
-var House = class extends Barricade {
+var House = class extends Barrier {
   static Name = "house wall";
   constructor(map, ch, x, y) {
     super(map);
@@ -1987,7 +2045,7 @@ var Tutorial = class extends Level {
   async changePhase(phase) {
     const { player, zombies, map } = this;
     this.phase = phase;
-    await sleep3(1e3);
+    await sleep4(1e3);
     switch (phase) {
       case "movement":
         zombies.spawnAt(map.width - 10, 10);
@@ -2001,7 +2059,7 @@ var Tutorial = class extends Level {
     await this.help();
   }
 };
-function sleep3(ms) {
+function sleep4(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function getDistantCorner(map, player) {
@@ -2053,12 +2111,13 @@ var Sandbox = class extends Level {
     super(renderer);
     const { player } = this;
     player.setItem("rake", Infinity);
-    player.setItem("barricade", Infinity);
+    player.setItem("barrier", Infinity);
     player.setItem("trap", Infinity);
     player.setItem("mine", Infinity);
     player.setItem("bazooka", Infinity);
     player.setItem("wire", Infinity);
     player.setItem("fence", Infinity);
+    player.setItem("shock", Infinity);
   }
   isAllowed(feature) {
     if (feature == "shop") {
@@ -2153,7 +2212,7 @@ var DOM = class extends Renderer {
 async function run() {
   let RCtor2 = DOM;
   let main = document.querySelector("main");
-  await init([43 * 2, 30], RCtor2);
+  await init([96, 32], RCtor2);
   init2();
   await welcome();
   while (true) {

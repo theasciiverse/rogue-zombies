@@ -1,8 +1,8 @@
-import Barricade from "./barricade.js";
+import Barrier from "./barrier.js";
 import Map from "../map.js";
 
 
-export default class House extends Barricade {
+export default class House extends Barrier {
 	static Name = "house wall";
 
 	constructor(map: Map, ch: string, x:number, y:number) {

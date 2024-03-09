@@ -8,3 +8,4 @@ export const WINDOW = "dodgerblue";
 export const ZOMBIE = ["DarkOliveGreen", "LightSlateGray", "Olive", "OliveDrab", "SaddleBrown", "GoldenRod", "DarkSeaGreen"];
 export const DOT = "#222";
 export const ROAD = "saddlebrown";
+export const SHOCK = FENCE[0];

@@ -11,12 +11,13 @@ export default class Sandbox extends Level {
 
 		const { player } = this;
 		player.setItem("rake", Infinity);
-		player.setItem("barricade", Infinity);
+		player.setItem("barrier", Infinity);
 		player.setItem("trap", Infinity);
 		player.setItem("mine", Infinity);
 		player.setItem("bazooka", Infinity);
 		player.setItem("wire", Infinity);
 		player.setItem("fence", Infinity);
+		player.setItem("shock", Infinity);
 	}
 
 	isAllowed(feature: Feature) {

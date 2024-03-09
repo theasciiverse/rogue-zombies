@@ -33,5 +33,5 @@ export default async function pickLevel() {
 	});
 
 	let id = await dialog.show();
-	return Ctors.find(Ctor => Ctor.Name == id);
+	return Ctors.find(Ctor => Ctor.Name == id)!;
 }

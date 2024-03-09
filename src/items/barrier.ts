@@ -7,8 +7,8 @@ import * as colors from "../colors.js"
 
 const COLORS = ["", ...colors.WOOD.slice().reverse()];
 
-export default class Barricade extends Item {
-	static Name = "Wooden barricade";
+export default class Barrier extends Item {
+	static Name = "Wooden barrier";
 	static description = "Can hold them for some time.";
 
 	protected _hp = COLORS.length-1;
@@ -17,7 +17,7 @@ export default class Barricade extends Item {
 	get blocksMovement() { return true; }
 
 	damage(source: Entity) {
-		sfx.play("barricade");
+		sfx.play("barrier");
 		super.damage(source);
 		if (this._hp > 0) {
 			this.visual.fg = COLORS[this._hp];
@@ -33,7 +33,7 @@ export default class Barricade extends Item {
 		let ty = position[1] + direction[1];
 		this._position = [tx, ty];
 		this.map.addItem(this);
-		log.add("You build a barricade.");
+		log.add("You build a barrier.");
 
 		return true;
 	}
