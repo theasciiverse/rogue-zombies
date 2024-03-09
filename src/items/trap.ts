@@ -6,7 +6,7 @@ import * as colors from "../colors.js";
 
 
 export default class Trap extends Item {
-	static Name = "Bear trap";
+	static Name = "bear trap";
 	static description = "Kills several zombies dumb enough to step on it.";
 	readonly visual = {ch:"0", fg:colors.METAL};
 	protected _hp = 3;

@@ -6,7 +6,7 @@ import * as colors from "../colors.js";
 
 
 export default class Rake extends Item {
-	static Name = "Rake";
+	static Name = "rake";
 	static description = "Kills one zombie dumb enough to step on it.";
 	readonly visual = {ch:"T", fg:colors.WOOD[1]};
 

@@ -290,7 +290,7 @@ var SHOCK = FENCE[0];
 
 // src/items/trap.ts
 var Trap = class extends Item {
-  static Name = "Bear trap";
+  static Name = "bear trap";
   static description = "Kills several zombies dumb enough to step on it.";
   visual = { ch: "0", fg: METAL };
   _hp = 3;
@@ -316,7 +316,7 @@ var Trap = class extends Item {
 // src/items/barrier.ts
 var COLORS = ["", ...WOOD.slice().reverse()];
 var Barrier = class extends Item {
-  static Name = "Wooden barrier";
+  static Name = "wooden barrier";
   static description = "Can hold them for some time.";
   _hp = COLORS.length - 1;
   visual = { ch: "#", fg: COLORS[COLORS.length - 1] };
@@ -347,7 +347,7 @@ var Barrier = class extends Item {
 
 // src/items/rake.ts
 var Rake = class extends Item {
-  static Name = "Rake";
+  static Name = "rake";
   static description = "Kills one zombie dumb enough to step on it.";
   visual = { ch: "T", fg: WOOD[1] };
   use(position, direction) {
@@ -555,7 +555,7 @@ async function explode(map, center, radius, source) {
 
 // src/items/mine.ts
 var Mine = class extends Item {
-  static Name = "Mine";
+  static Name = "mine";
   static description = "Explodes when stepped on by a zombie.";
   visual = { ch: "+", fg: METAL };
   use(position, direction) {
@@ -581,8 +581,8 @@ var Mine = class extends Item {
 // src/items/bazooka.ts
 var Bazooka = class extends Item {
   visual = { ch: "*", fg: "yellow" };
-  static Name = "Bazooka";
-  static description = "Flys in a straight line, explodes on impact.";
+  static Name = "bazooka";
+  static description = "Flies in a straight line, explodes on impact.";
   async use(position, direction) {
     const { map, visual } = this;
     this._position = position;
@@ -638,7 +638,7 @@ function sleep2(ms) {
 // src/items/wire.ts
 var CONNECTION_DISTANCE = 3;
 var Wire = class extends Item {
-  static Name = "Barbed wire";
+  static Name = "barbed wire fence";
   static description = "Auto-connects to nearby wires (up to 3 blocks away). Has little health.";
   visual = { ch: "*", fg: METAL };
   sound = "wire";
@@ -702,7 +702,7 @@ function tryConnection(position, directionIndex, map, Ctor) {
 // src/items/fence.ts
 var COLORS2 = ["", ...FENCE.slice().reverse()];
 var Fence = class extends Wire {
-  static Name = "Electric fence";
+  static Name = "electric fence";
   static description = "Auto-connects to nearby fences (up to 3 blocks away). Has more health.";
   _hp = COLORS2.length - 1;
   visual = { ch: "*", fg: COLORS2[this._hp] };
@@ -719,7 +719,7 @@ var Fence = class extends Wire {
 // src/items/shock.ts
 var Shock = class extends Item {
   visual = {};
-  static Name = "Electric shock";
+  static Name = "electric shock";
   static description = "Electrocutes a nearby zombie, jumps to neighboring zombies.";
   async use(position, direction) {
     const { map } = this;
@@ -1774,7 +1774,7 @@ function buildItemRow(item, player, dialog, options) {
   let kbd = document.createElement("kbd");
   kbd.textContent = item.key;
   row.insertCell().append(kbd);
-  row.insertCell().textContent = item.ctor.Name;
+  row.insertCell().textContent = item.ctor.Name.capitalize();
   let price = document.createElement("span");
   price.className = "money";
   price.textContent = String(item.price);

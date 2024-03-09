@@ -57,7 +57,7 @@ function buildItemRow(item: ItemTemplate, player: Player, dialog: Dialog, option
 	kbd.textContent = item.key;
 	row.insertCell().append(kbd);
 
-	row.insertCell().textContent = item.ctor.Name;
+	row.insertCell().textContent = item.ctor.Name.capitalize();
 
 	let price = document.createElement("span");
 	price.className = "money";

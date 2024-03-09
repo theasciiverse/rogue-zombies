@@ -7,7 +7,7 @@ import * as colors from "../colors.js";
 
 
 export default class Mine extends Item {
-	static Name = "Mine";
+	static Name = "mine";
 	static description = "Explodes when stepped on by a zombie.";
 	readonly visual = {ch:"+", fg:colors.METAL};
 

@@ -8,7 +8,7 @@ import * as colors from "../colors.js"
 const COLORS = ["", ...colors.WOOD.slice().reverse()];
 
 export default class Barrier extends Item {
-	static Name = "Wooden barrier";
+	static Name = "wooden barrier";
 	static description = "Can hold them for some time.";
 
 	protected _hp = COLORS.length-1;

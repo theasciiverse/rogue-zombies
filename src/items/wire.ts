@@ -12,7 +12,7 @@ import DIRS, { CHARS } from "../dirs.js";
 const CONNECTION_DISTANCE = 3;
 
 export default class Wire extends Item {
-	static Name = "Barbed wire";
+	static Name = "barbed wire fence";
 	static description = "Auto-connects to nearby wires (up to 3 blocks away). Has little health.";
 	readonly visual = {ch:"*", fg:colors.METAL};
 	protected sound: Parameters<typeof sfx.play>[0] = "wire";

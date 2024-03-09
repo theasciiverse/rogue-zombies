@@ -8,8 +8,8 @@ import * as sfx from "../sfx.js";
 export default class Bazooka extends Item {
 	readonly visual = {ch:"*", fg:"yellow"};
 
-	static Name = "Bazooka";
-	static description = "Flys in a straight line, explodes on impact.";
+	static Name = "bazooka";
+	static description = "Flies in a straight line, explodes on impact.";
 
 	async use(position: number[], direction: number[]) {
 		const { map, visual } = this;

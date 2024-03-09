@@ -10,7 +10,7 @@ import DIRS from "../dirs.js";
 export default class Shock extends Item {
 	readonly visual = {};
 
-	static Name = "Electric shock";
+	static Name = "electric shock";
 	static description = "Electrocutes a nearby zombie, jumps to neighboring zombies.";
 
 	async use(position: number[], direction: number[]) {

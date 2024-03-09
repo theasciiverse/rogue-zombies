@@ -7,7 +7,7 @@ import * as colors from "../colors.js";
 const COLORS = ["", ...colors.FENCE.slice().reverse()];
 
 export default class Fence extends Wire {
-	static Name = "Electric fence";
+	static Name = "electric fence";
 	static description = "Auto-connects to nearby fences (up to 3 blocks away). Has more health.";
 	protected _hp = COLORS.length-1;
 	readonly visual = {ch:"*", fg:COLORS[this._hp]};
