@@ -159,7 +159,7 @@ function buildItem(it: ItemTemplate) {
 
 	let c = document.createElement("span");
 	c.className = "count";
-	node.append(kbd, it.short || it.ctor.Name, c, "  ");
+	node.append(kbd, (it.short || it.ctor.Name).capitalize(), c, "  ");
 
 	return node;
 }

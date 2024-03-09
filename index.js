@@ -769,7 +769,7 @@ function sleep3(ms) {
 // src/items/db.ts
 var ITEMS = [{
   id: "barrier",
-  short: "Barrier",
+  short: "barrier",
   key: "1",
   price: 1,
   amount: 5,
@@ -782,7 +782,7 @@ var ITEMS = [{
   ctor: Rake
 }, {
   id: "trap",
-  short: "Trap",
+  short: "trap",
   key: "3",
   price: 2,
   amount: 3,
@@ -795,7 +795,7 @@ var ITEMS = [{
   ctor: Mine
 }, {
   id: "shock",
-  short: "Shock",
+  short: "shock",
   key: "5",
   price: 4,
   amount: 2,
@@ -808,14 +808,14 @@ var ITEMS = [{
   ctor: Bazooka
 }, {
   id: "wire",
-  short: "Wire",
+  short: "wire",
   key: "7",
   price: 2,
   amount: 2,
   ctor: Wire
 }, {
   id: "fence",
-  short: "Fence",
+  short: "fence",
   key: "8",
   price: 3,
   amount: 2,
@@ -1185,7 +1185,7 @@ function buildItem(it) {
   kbd.textContent = it.key;
   let c = document.createElement("span");
   c.className = "count";
-  node3.append(kbd, it.short || it.ctor.Name, c, "  ");
+  node3.append(kbd, (it.short || it.ctor.Name).capitalize(), c, "  ");
   return node3;
 }
 function animateIfChanged(node3, value) {

@@ -10,7 +10,7 @@ import Shock from "./shock.js";
 
 export const ITEMS = [{
 	id: "barrier",
-	short: "Barrier",
+	short: "barrier",
 	key: "1",
 	price: 1,
 	amount: 5,
@@ -23,7 +23,7 @@ export const ITEMS = [{
 	ctor: Rake
 }, {
 	id: "trap",
-	short: "Trap",
+	short: "trap",
 	key: "3",
 	price: 2,
 	amount: 3,
@@ -36,7 +36,7 @@ export const ITEMS = [{
 	ctor: Mine
 }, {
 	id: "shock",
-	short: "Shock",
+	short: "shock",
 	key: "5",
 	price: 4,
 	amount: 2,
@@ -49,14 +49,14 @@ export const ITEMS = [{
 	ctor: Bazooka
 }, {
 	id: "wire",
-	short: "Wire",
+	short: "wire",
 	key: "7",
 	price: 2,
 	amount: 2,
 	ctor: Wire
 }, {
 	id: "fence",
-	short: "Fence",
+	short: "fence",
 	key: "8",
 	price: 3,
 	amount: 2,
