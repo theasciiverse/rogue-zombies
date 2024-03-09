@@ -1,8 +1,6 @@
 # Rogue Zombies: the 2024 7DRL
 
-WIP!
-
-- [Play the game!]()
+- [Play the game!](https://ondras.github.io/roguezombies/)
 - [Manual](MANUAL.md)
 - [Credits](CREDITS.md)
 - [MIT License](LICENSE.md)
