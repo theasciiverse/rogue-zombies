@@ -11,6 +11,10 @@ function gatherPositions(map: Map, center: number[], r: number) {
 
 	for (let i=center[0]-r;i<=center[0]+r;i++) {
 		for (let j=center[1]-r;j<=center[1]+r;j++) {
+			let verticalEdge = Math.abs(i-center[0]) == r;
+			let horizontalEdge = Math.abs(j-center[1]) == r;
+			if (verticalEdge && horizontalEdge) { continue; } // v rozich ne
+
 			if (!map.isPositionValid(i, j)) { continue; }
 			positions.push([i, j]);
 		}
@@ -41,10 +45,19 @@ function drawExplosions(map: Map, positions: number[][], fraction: number) {
 	positions.forEach(pos => map.setFX(pos[0], pos[1], visual));
 }
 
-export async function explode(map: Map, position: number[], radius: number, source: Item) {
-	let positions = gatherPositions(map, position, radius);
+export async function explode(map: Map, center: number[], radius: number, source: Item) {
+	let positions = gatherPositions(map, center, radius);
+	let zombies = extractZombies(positions, map);
+	const DIST = 10;
 
-	extractZombies(positions, map).forEach(z => z.damage(source));
+	zombies.forEach(z => {
+		let expCenter = (z.position.distance(center) == 0 ? source.position : center)
+		let dx = z.position[0] - expCenter[0];
+		let dy = z.position[1] - expCenter[1];
+		let vec = [dx, dy].normalize();
+		let pos = [z.position[0] + vec[0]*DIST, z.position[1] + vec[1]*DIST];
+		z.position = [Math.round(pos[0]), Math.round(pos[1])];
+	});
 
 	// remove corpses
 	positions.forEach(pos => {
@@ -61,54 +74,7 @@ export async function explode(map: Map, position: number[], radius: number, sour
 	}
 
 	positions.forEach(pos => map.setFX(pos[0], pos[1], null));
+
+	// damage => kill&remove
+	zombies.forEach(z => z.damage(source));
 }
-
-/*
-
-RZ.Item.prototype._explode = function(coords) {
-	RZ.rz.lock();
-	var fx = new RZ.Object();
-	fx.visual.ch = "*";
-
-	for (var i=0;i<coords.length;i++) {
-		var c = coords[i];
-		var being = RZ.rz.getBeing(c[0], c[1]);
-		if (being) {
-			if (being != RZ.rz.player) { being.damage(this); }
-		} else {
-			RZ.rz.removeBackground(c[0], c[1]);
-		}
-	}
-
-	var length = 400;
-	var start = new Date().getTime();
-
-	var step = function() {
-		var ts = new Date().getTime();
-		var fraction = (ts-start)/length;
-		if (fraction >= 1) {
-			for (var i=0;i<coords.length;i++) { RZ.rz.removeFX(coords[i][0], coords[i][1]); }
-			clearInterval(interval);
-			RZ.rz.unlock();
-		} else {
-			this._explosionStep(coords, fx, fraction);
-		}
-	}.bind(this);
-
-	step();
-	var interval = setInterval(step, 30);
-}
-
-RZ.Item.prototype._explosionStep = function(coords, fx, fraction) {
-	var amount = Math.round(3*255*(1-fraction));
-
-	var r = Math.max(0, Math.min(amount-0*255, 255));
-	var g = Math.max(0, Math.min(amount-1*255, 255));
-	var b = Math.max(0, Math.min(amount-2*255, 255));
-	fx.visual.fg = "rgb("+r+","+g+","+b+")"
-
-	for (var i=0;i<coords.length;i++) {
-		RZ.rz.addFX(fx, coords[i][0], coords[i][1]);
-	}
-}
-*/

@@ -264,10 +264,11 @@ var Corpse = class extends Item {
 // src/beings/being.ts
 var Being = class extends Entity {
   die(source) {
-    const { map } = this;
+    const { map, position } = this;
     map.removeBeing(this);
-    let existing = map.getItem(this.position[0], this.position[1]);
-    if (!existing) {
+    let valid = map.isPositionValid(position[0], position[1]);
+    let existing = map.getItem(position[0], position[1]);
+    if (valid && !existing) {
       let corpse = new Corpse(map, this);
       map.addItem(corpse);
     }
@@ -488,6 +489,11 @@ function gatherPositions(map, center, r) {
   let positions = [];
   for (let i = center[0] - r; i <= center[0] + r; i++) {
     for (let j = center[1] - r; j <= center[1] + r; j++) {
+      let verticalEdge = Math.abs(i - center[0]) == r;
+      let horizontalEdge = Math.abs(j - center[1]) == r;
+      if (verticalEdge && horizontalEdge) {
+        continue;
+      }
       if (!map.isPositionValid(i, j)) {
         continue;
       }
@@ -515,9 +521,18 @@ function drawExplosions(map, positions, fraction) {
   let visual = { ch: "*", fg };
   positions.forEach((pos) => map.setFX(pos[0], pos[1], visual));
 }
-async function explode(map, position, radius, source) {
-  let positions = gatherPositions(map, position, radius);
-  extractZombies(positions, map).forEach((z) => z.damage(source));
+async function explode(map, center, radius, source) {
+  let positions = gatherPositions(map, center, radius);
+  let zombies = extractZombies(positions, map);
+  const DIST = 10;
+  zombies.forEach((z) => {
+    let expCenter = z.position.distance(center) == 0 ? source.position : center;
+    let dx = z.position[0] - expCenter[0];
+    let dy = z.position[1] - expCenter[1];
+    let vec = [dx, dy].normalize();
+    let pos = [z.position[0] + vec[0] * DIST, z.position[1] + vec[1] * DIST];
+    z.position = [Math.round(pos[0]), Math.round(pos[1])];
+  });
   positions.forEach((pos) => {
     let item = map.getItem(pos[0], pos[1]);
     if (item instanceof Corpse) {
@@ -531,6 +546,7 @@ async function explode(map, position, radius, source) {
     await sleep(step);
   }
   positions.forEach((pos) => map.setFX(pos[0], pos[1], null));
+  zombies.forEach((z) => z.damage(source));
 }
 
 // src/items/mine.ts
@@ -565,6 +581,7 @@ var Bazooka = class extends Item {
   static description = "Flys in a straight line, explodes on impact.";
   async use(position, direction) {
     const { map, visual } = this;
+    this._position = position;
     play("swoosh");
     add("You launch a rocket...");
     let { target, distance } = getTarget(map, position, direction);
@@ -1338,7 +1355,9 @@ var Map2 = class {
   getDrawables(x, y) {
     const { bg, fx } = this;
     let drawables = [];
-    drawables.push(bg.at(x, y));
+    if (this.isPositionValid(x, y)) {
+      drawables.push(bg.at(x, y));
+    }
     let item = this.getItem(x, y);
     item && drawables.push(item);
     let being = this.getBeing(x, y);

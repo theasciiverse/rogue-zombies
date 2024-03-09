@@ -13,6 +13,8 @@ export default class Bazooka extends Item {
 
 	async use(position: number[], direction: number[]) {
 		const { map, visual } = this;
+
+		this._position = position; // !! potrebuje pozici, podle ktere se pripadne pocita vektor exploze pro zasazeny cil
 		sfx.play("swoosh");
 		log.add("You launch a rocket...");
 

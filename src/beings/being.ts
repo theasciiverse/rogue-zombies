@@ -4,12 +4,14 @@ import Corpse from "../items/corpse.js";
 
 export default abstract class Being extends Entity {
 	die(source: Entity) {
-		const { map } = this;
+		const { map, position } = this;
 
 		map.removeBeing(this);
 
-		let existing = map.getItem(this.position[0], this.position[1]);
-		if (!existing) {
+		let valid = map.isPositionValid(position[0], position[1]);
+		let existing = map.getItem(position[0], position[1]);
+
+		if (valid && !existing) {
 			let corpse = new Corpse(map, this);
 			map.addItem(corpse);
 		}

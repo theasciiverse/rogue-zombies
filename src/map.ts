@@ -118,7 +118,7 @@ export default class Map {
 
 		let drawables: Drawable[] = [];
 
-		drawables.push(bg.at(x, y));
+		if (this.isPositionValid(x, y)) { drawables.push(bg.at(x, y)); }
 
 		let item = this.getItem(x, y);
 		item && drawables.push(item);
