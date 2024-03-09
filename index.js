@@ -940,11 +940,11 @@ var Player = class extends Being {
       let num = key.code.match(/\d/);
       return num ? this.tryItem(num[0]) : false;
     }
-    if (["i", "I"].includes(key.key) && level.isAllowed("shop")) {
+    if (key.code == "KeyI" && level.isAllowed("shop")) {
       await level.shop();
       return false;
     }
-    if (["s", "S"].includes(key.key) && level.isAllowed("start")) {
+    if (key.code == "KeyS" && level.isAllowed("start")) {
       let result = await start();
       if (result) {
         level.start();
