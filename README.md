@@ -1,3 +1,10 @@
+> **In the terminal:** this is the Asciiverse edition. Install and start it
+> with [av](https://asciiverse.sh): `av install rogue-zombies`, then pick it
+> in av. To build it yourself: `make -f asciiverse/Makefile`, then
+> `./out/rogue-zombies`. What changed, and how it runs, is in
+> [PATCHES.md](PATCHES.md); the licence and the author's permission in
+> [PERMISSION.md](PERMISSION.md).
+
 # Rogue Zombies: the 2024 7DRL
 
 - [Play the game!](https://ondras.github.io/roguezombies/)
