@@ -70,7 +70,11 @@ Object.defineProperties(DOM.Style.prototype, {
     // tables, without a tbody
     P.insertRow = function () { var r = document.createElement("tr"); this.appendChild(r); return r; };
     P.insertCell = function () { var c = document.createElement("td"); this.appendChild(c); return c; };
-    Object.defineProperty(P, "rows", { get: function () { return DOM.query(this, "tr", false); } });
+    // a table's rows; a canvas (and anything else) may keep its own "rows"
+    Object.defineProperty(P, "rows", {
+        get: function () { return DOM.query(this, "tr", false); },
+        set: function (v) { Object.defineProperty(this, "rows", { value: v, writable: true, configurable: true, enumerable: true }); }
+    });
     Object.defineProperty(P, "tBodies", { get: function () {
         var b = this.children.filter(function (c) { return c.tagName == "TBODY"; });
         if (!b.length && this.tagName == "TABLE") { var t = document.createElement("tbody"); this.appendChild(t); b = [t]; }
@@ -206,7 +210,42 @@ DOM.URL = function (href, base) {
 };
 DOM.URL.prototype.toString = function () { return this.href; };
 
+// fetch: the game's own files (GAME.files), else an empty answer
+DOM.fetch = function (url) {
+    var path = String(url).replace(/^\.\//, "").replace(/\?.*$/, "");
+    var f = GAME.files ? GAME.files[path] : null;
+    var res = {
+        ok: f != null, status: f != null ? 200 : 404, url: path,
+        text: function () { return Promise.resolve(f || ""); },
+        json: function () { return Promise.resolve(JSON.parse(f || "null")); },
+        arrayBuffer: function () { return Promise.resolve(new ArrayBuffer(0)); },
+        blob: function () { return Promise.resolve({ size: 0 }); }
+    };
+    return Promise.resolve(res);
+};
+
+// Web Audio, silent: nodes connect and start, nothing is heard
+DOM.AudioContext = function () {
+    var node = function () {
+        var n = { connect: function (x) { return x; }, disconnect: function () {}, start: function () {}, stop: function () {},
+            setPosition: function () {}, setOrientation: function () {}, addEventListener: function () {} };
+        ["gain", "frequency", "detune", "playbackRate", "positionX", "positionY", "positionZ", "pan"].forEach(function (k) {
+            n[k] = { value: 0, setValueAtTime: function () {}, linearRampToValueAtTime: function () {}, exponentialRampToValueAtTime: function () {}, setTargetAtTime: function () {} };
+        });
+        return n;
+    };
+    this.state = "running"; this.currentTime = 0; this.sampleRate = 44100;
+    this.destination = node(); this.listener = node();
+    ["createGain", "createPanner", "createBufferSource", "createOscillator", "createStereoPanner", "createBiquadFilter", "createDynamicsCompressor", "createMediaElementSource"].forEach(function (k) { this[k] = node; }, this);
+    this.createBuffer = function (c, len, rate) { return { duration: len / (rate || 44100), length: len, numberOfChannels: c, getChannelData: function () { return new Float32Array(len); } }; };
+    this.decodeAudioData = function () { return Promise.resolve({ duration: 0, length: 0, numberOfChannels: 1, getChannelData: function () { return new Float32Array(0); } }); };
+    this.resume = this.suspend = this.close = function () { return Promise.resolve(); };
+};
+
 DOM.setupWeb = function (g) {
+    g.fetch = DOM.fetch;
+    g.AudioContext = g.webkitAudioContext = DOM.AudioContext;
+    if (g.Image && !g.Image.prototype.decode) g.Image.prototype.decode = function () { return Promise.resolve(); };
     g.customElements = DOM.customElements;
     g.EventTarget = function EventTarget() { DOM.listen(this); };
     g.AbortController = DOM.AbortController;

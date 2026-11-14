@@ -224,7 +224,7 @@ DOM.Fragment.prototype = Object.create(DOM.Element.prototype);
 // ------------------------------------------------------------ html parsing
 
 DOM.VOID = { br: 1, img: 1, hr: 1, input: 1, meta: 1, link: 1, wbr: 1 };
-DOM.ENT = { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", nbsp: " ", ndash: "-", mdash: "-", hellip: "...", times: "x", copy: "(c)", laquo: "«", raquo: "»", middot: "·", bull: "•", larr: "←", rarr: "→", uarr: "↑", darr: "↓", hearts: "♥", minus: "-",
+DOM.ENT = { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", nbsp: " ", ndash: "-", mdash: "-", hellip: "...", times: "x", copy: "(c)", laquo: "«", raquo: "»", middot: "·", bull: "•", larr: "←", rarr: "→", uarr: "↑", darr: "↓", hearts: "♥", minus: "-", plus: "+", equals: "=", colon: ":", lpar: "(", rpar: ")", excl: "!", quest: "?", num: "#", dollar: "$", percnt: "%", ast: "*", comma: ",", period: ".", sol: "/",
     eacute: "é", aacute: "á", iacute: "í", oacute: "ó", uacute: "ú", scaron: "š", ccaron: "č", rcaron: "ř", zcaron: "ž", deg: "°", frac12: "½", euro: "€", pound: "£", trade: "(tm)", reg: "(R)" };
 DOM.entities = function (s) {
     return s.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, function (m, e) {
@@ -369,7 +369,9 @@ DOM.Canvas.prototype.fill = function (bg) {
     for (var i = 0; i < this.ch.length; i++) { this.ch[i] = " "; this.bg[i] = bg; this.fg[i] = null; }
     DOM.touch();
 };
-DOM.Canvas.prototype.getContext = function () {
+DOM.Canvas.prototype.getContext = function (type) {
+    // WebGL is the game layout's to provide, if it can stand in for one
+    if (type && /webgl/.test(type)) return GAME.webgl ? GAME.webgl(this, type) : null;
     if (this._ctx) return this._ctx;
     var canvas = this;
     this._ctx = {
